@@ -385,10 +385,6 @@ private:
   su2double **Periodic_RotCenter;  /*!< \brief Rotational center for each periodic boundary. */
   su2double **Periodic_RotAngles;      /*!< \brief Rotation angles for each periodic boundary. */
   su2double **Periodic_Translation;      /*!< \brief Translation vector for each periodic boundary. */
-  unsigned short nPeriodic_Index;     /*!< \brief Number of SEND_RECEIVE periodic transformations. */
-  su2double **Periodic_Center;         /*!< \brief Rotational center for each SEND_RECEIVE boundary. */
-  su2double **Periodic_Rotation;      /*!< \brief Rotation angles for each SEND_RECEIVE boundary. */
-  su2double **Periodic_Translate;      /*!< \brief Translation vector for each SEND_RECEIVE boundary. */
   string *Marker_CfgFile_TagBound;			/*!< \brief Global index for markers using config file. */
   unsigned short *Marker_All_KindBC,			/*!< \brief Global index for boundaries using grid information. */
   *Marker_CfgFile_KindBC;		/*!< \brief Global index for boundaries using config file. */
@@ -6504,60 +6500,6 @@ public:
    *         has the marker <i>val_marker</i>.
    */
   string GetMarker_Analyze_TagBound(unsigned short val_marker);
-  
-  /*!
-   * \brief Set the total number of SEND_RECEIVE periodic transformations.
-   * \param[in] val_index - Total number of transformations.
-   */
-  void SetnPeriodicIndex(unsigned short val_index);
-  
-  /*!
-   * \brief Get the total number of SEND_RECEIVE periodic transformations.
-   * \return Total number of transformations.
-   */
-  unsigned short GetnPeriodicIndex(void);
-  
-  /*!
-   * \brief Set the rotation center for a periodic transformation.
-   * \param[in] val_index - Index corresponding to the periodic transformation.
-   * \param[in] center - Pointer to a vector containing the coordinate of the center.
-   */
-  void SetPeriodicCenter(unsigned short val_index, su2double* center);
-  
-  /*!
-   * \brief Get the rotation center for a periodic transformation.
-   * \param[in] val_index - Index corresponding to the periodic transformation.
-   * \return A vector containing coordinates of the center point.
-   */
-  su2double* GetPeriodicCenter(unsigned short val_index);
-  
-  /*!
-   * \brief Set the rotation angles for a periodic transformation.
-   * \param[in] val_index - Index corresponding to the periodic transformation.
-   * \param[in] rotation - Pointer to a vector containing the rotation angles.
-   */
-  void SetPeriodicRotation(unsigned short val_index, su2double* rotation);
-  
-  /*!
-   * \brief Get the rotation angles for a periodic transformation.
-   * \param[in] val_index - Index corresponding to the periodic transformation.
-   * \return A vector containing the angles of rotation.
-   */
-  su2double* GetPeriodicRotation(unsigned short val_index);
-  
-  /*!
-   * \brief Set the translation vector for a periodic transformation.
-   * \param[in] val_index - Index corresponding to the periodic transformation.
-   * \param[in] translate - Pointer to a vector containing the coordinate of the center.
-   */
-  void SetPeriodicTranslate(unsigned short val_index, su2double* translate);
-
-  /*!
-   * \brief Get the translation vector for a periodic transformation.
-   * \param[in] val_index - Index corresponding to the periodic transformation.
-   * \return The translation vector.
-   */
-  su2double* GetPeriodicTranslate(unsigned short val_index);
   
   /*!
    * \brief Get the total temperature at a nacelle boundary.

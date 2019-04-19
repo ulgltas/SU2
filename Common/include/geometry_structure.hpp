@@ -337,11 +337,6 @@ public:
   su2double **TurboRadiusIn, **TurboRadiusOut; /*! <\brief Radius at each span wise section for each turbomachinery marker*/
 
   unsigned short nCommLevel;		/*!< \brief Number of non-blocking communication levels. */
-	vector<unsigned long> PeriodicPoint[MAX_NUMBER_PERIODIC][2];			/*!< \brief PeriodicPoint[Periodic bc] and return the point that
-																			 must be sent [0], and the image point in the periodic bc[1]. */
-	vector<unsigned long> PeriodicElem[MAX_NUMBER_PERIODIC];				/*!< \brief PeriodicElem[Periodic bc] and return the elements that 
-																			 must be sent. */
-  
   short *Marker_All_SendRecv;
   
 	/*--- Create vectors and distribute the values among the different planes queues ---*/
@@ -900,12 +895,6 @@ public:
 
 	/*! 
 	 * \brief A virtual member.
-	 * \param[in] config - Definition of the particular problem.		 
-	 */
-	virtual void SetPeriodicBoundary(CConfig *config);
-
-	/*! 
-	 * \brief A virtual member.
 	 * \param[in] geometry - Geometrical definition of the problem.
 	 * \param[in] config - Definition of the particular problem.
 	 * \param[in] val_domain - Number of domains for parallelization purposes.		 
@@ -997,19 +986,11 @@ public:
 	 */
 	virtual void SetBoundSensitivity(CConfig *config);
 
-	/*! 
-	 * \brief A virtual member.
-	 * \param[in] geometry - Geometrical definition of the problem.
-	 * \param[in] config - Definition of the particular problem.
-	 */
-	virtual void SetPeriodicBoundary(CGeometry *geometry, CConfig *config);
-
   /*!
    * \brief Set the data containers for customized boundary conditions.
    * \param[in] config - Definition of the particular problem.
    */
   virtual void SetCustomBoundary(CConfig *config);
-
 
   /*!
    * \brief A virtual member.
@@ -1036,30 +1017,6 @@ public:
     * \param[in] iter - Current physical time step.
     */
    virtual void SetGridVelocity(CConfig *config, unsigned long iter);
-
-   /*!
-    * \brief A virtual member.
-    * \param[in] config - Definition of the particular problem.
-    */
-   virtual void Set_MPI_Coord(CConfig *config);
-
-   /*!
-    * \brief A virtual member.
-    * \param[in] config - Definition of the particular problem.
-    */
-   virtual void Set_MPI_GridVel(CConfig *config);
-
-   /*!
-    * \brief A virtual member.
-    * \param[in] config - Definition of the particular problem.
-    */
-  virtual void Set_MPI_OldCoord(CConfig *config);
-
-  /*!
-   * \brief A virtual member.
-   * \param[in] config - Definition of the particular problem.
-   */
-  virtual void Set_MPI_MaxLength(CConfig *config);
 
 	/*!
 	 * \brief A virtual member.
@@ -1720,7 +1677,6 @@ class CPhysicalGeometry : public CGeometry {
   unsigned long nLocal_Point,
   nLocal_PointDomain,
   nLocal_PointGhost,
-  nLocal_PointPeriodic,
   nLocal_Elem,
   nLocal_Bound_Elem,
   nGlobal_Elem,
@@ -1800,16 +1756,6 @@ public:
 	 * \param[in] config - Definition of the particular problem.
 	 */
   CPhysicalGeometry(CGeometry *geometry, CConfig *config);
-
-  /*!
-   * \overload
-   * \brief Accepts a geometry container holding a linearly partitioned grid
-   *        with coloring performed by ParMETIS, and this routine distributes
-   *        the points and cells to all partitions based on the coloring.
-   * \param[in] geometry - Definition of the geometry container holding the initial linear partitions of the grid + coloring.
-   * \param[in] config - Definition of the particular problem.
-   */
-  CPhysicalGeometry(CGeometry *geometry, CConfig *config, bool val_flag);
 
 	/*!
 	 * \brief Destructor of the class.
@@ -2257,36 +2203,6 @@ void UpdateTurboVertex(CConfig *config,unsigned short val_iZone, unsigned short 
    * \param[in] config - Definition of the particular problem.
    */
   void SetGridVelocity(CConfig *config, unsigned long iter);
-  
-  /*!
-   * \brief Perform the MPI communication for the grid coordinates (dynamic meshes).
-   * \param[in] config - Definition of the particular problem.
-   */
-  void Set_MPI_Coord(CConfig *config);
-  
-  /*!
-   * \brief Perform the MPI communication for the grid velocities.
-   * \param[in] config - Definition of the particular problem.
-   */
-  void Set_MPI_GridVel(CConfig *config);
-  
-  /*!
-   * \brief Perform the MPI communication for the grid coordinates (dynamic meshes) for restart purposes.
-   * \param[in] config - Definition of the particular problem.
-   */
-  void Set_MPI_OldCoord(CConfig *config);
-  
-  /*!
-   * \brief Perform the MPI communication for the max grid spacing.
-   * \param[in] config - Definition of the particular problem.
-   */
-  void Set_MPI_MaxLength(CConfig *config);
-
-  /*!
-   * \brief Set the periodic boundary conditions.
-   * \param[in] config - Definition of the particular problem.
-   */
-  void SetPeriodicBoundary(CConfig *config);
 
 	/*! 
 	 * \brief Do an implicit smoothing of the grid coordinates.
@@ -2983,51 +2899,6 @@ void SetTranslationalVelocity(CConfig *config, unsigned short val_iZone, bool pr
 	 */
 	vector<vector<unsigned long> > GetPlanarPoints();
 
-};
-
-/*! 
- * \class CPeriodicGeometry
- * \brief Class for defining a periodic boundary condition.
- * \author T. Economon, F. Palacios
- */
-class CPeriodicGeometry : public CGeometry {
-	CPrimalGrid*** newBoundPer;            /*!< \brief Boundary vector for new periodic elements (primal grid information). */
-	unsigned long *nNewElem_BoundPer;			/*!< \brief Number of new periodic elements of the boundary. */
-
-public:
-
-	/*! 
-	 * \brief Constructor of the class.
-	 * \param[in] geometry - Geometrical definition of the problem.
-	 * \param[in] config - Definition of the particular problem.
-	 */
-	CPeriodicGeometry(CGeometry *geometry, CConfig *config);
-
-	/*! 
-	 * \brief Destructor of the class.
-	 */
-	~CPeriodicGeometry(void);
-
-	/*! 
-	 * \brief Set the periodic boundaries of the grid.
-	 * \param[in] geometry - Geometrical definition of the problem.
-	 * \param[in] config - Definition of the particular problem.
-	 */
-	void SetPeriodicBoundary(CGeometry *geometry, CConfig *config);
-
-	/*! 
-	 * \brief Set the Tecplot file.
-	 * \param[in] config_filename - Name of the file where the Tecplot 
-	 *            information is going to be stored.
-	 */
-	void SetTecPlot(char config_filename[MAX_STRING_SIZE], bool new_file);
-
-	/*! 
-	 * \brief Write the .su2 file.
-	 * \param[in] config - Definition of the particular problem.		 
-	 * \param[in] val_mesh_out_filename - Name of the output file.
-	 */
-	void SetMeshFile(CGeometry *geometry, CConfig *config, string val_mesh_out_filename);
 };
 
 /*! 

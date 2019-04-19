@@ -289,25 +289,10 @@ int main(int argc, char *argv[]) {
     
     if (config_container[ZONE_0]->GetKind_Adaptation() == PERIODIC) {
       
-      cout << endl <<"-------------------- Setting the periodic boundaries --------------------" << endl;
-      
-      /*--- Set periodic boundary conditions ---*/
-      
-      geometry_container[ZONE_0]->SetPeriodicBoundary(config_container[ZONE_0]);
-      
-      /*--- Original grid for debugging purposes ---*/
-      
-      strcpy (file_name, "periodic_original.dat"); geometry_container[ZONE_0]->SetTecPlot(file_name, true);
-      
-      /*--- Create a new grid with the right periodic boundary ---*/
-      
-      CGeometry *periodic; periodic = new CPeriodicGeometry(geometry_container[ZONE_0], config_container[ZONE_0]);
-      periodic->SetPeriodicBoundary(geometry_container[ZONE_0], config_container[ZONE_0]);
-      periodic->SetMeshFile(geometry_container[ZONE_0], config_container[ZONE_0], config_container[ZONE_0]->GetMesh_Out_FileName());
-      
-      /*--- Output of the grid for debuging purposes ---*/
-      
-      strcpy (file_name, "periodic_halo.dat"); periodic->SetTecPlot(file_name, true);
+      SU2_MPI::Error(string("PERIODIC adaptation option has been deprecated!\n\n") +
+                     string("For SU2 v7.0.0 and later, preprocessing of periodic grids by SU2_MSH\n") +
+                     string("is no longer necessary. Please use the original mesh file (prior to SU2_MSH)\n") +
+                     string("with the same MARKER_PERIODIC definition in the configuration file.") , CURRENT_FUNCTION);
       
     }
     

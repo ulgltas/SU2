@@ -521,7 +521,6 @@ void CConfig::SetPointersNull(void) {
 
   /*--- Periodic BC pointers. ---*/
   
-  Periodic_Translate  = NULL;    Periodic_Rotation   = NULL;    Periodic_Center     = NULL;
   Periodic_Translation= NULL;    Periodic_RotAngles  = NULL;    Periodic_RotCenter  = NULL;
 
   /* Harmonic Balance Frequency pointer */
@@ -612,7 +611,6 @@ void CConfig::SetPointersNull(void) {
   AoS_Offset = 0;
 
   nMarker_PerBound = 0;
-  nPeriodic_Index  = 0;
 
   Grid_Movement = false;
   Aeroelastic_Simulation = false;
@@ -6834,7 +6832,7 @@ int CConfig::GetMarker_ZoneInterface(string val_marker) {
 
 CConfig::~CConfig(void) {
 	
-  unsigned long iDV, iMarker, iPeriodic, iFFD;
+  unsigned long iDV, iMarker, iFFD;
 
   /*--- Delete all of the option objects in the global option map ---*/
     
@@ -7185,15 +7183,6 @@ CConfig::~CConfig(void) {
   if (Periodic_RotCenter   != NULL) delete[] Periodic_RotCenter;
   if (Periodic_RotAngles   != NULL) delete[] Periodic_RotAngles;
   if (Periodic_Translation != NULL) delete[] Periodic_Translation;
-
-  for (iPeriodic = 0; iPeriodic < nPeriodic_Index; iPeriodic++) {
-    if (Periodic_Center    != NULL) delete [] Periodic_Center[iPeriodic];
-    if (Periodic_Rotation  != NULL) delete [] Periodic_Rotation[iPeriodic];
-    if (Periodic_Translate != NULL) delete [] Periodic_Translate[iPeriodic];
-  }
-  if (Periodic_Center      != NULL) delete[] Periodic_Center;
-  if (Periodic_Rotation    != NULL) delete[] Periodic_Rotation;
-  if (Periodic_Translate   != NULL) delete[] Periodic_Translate;
 
   if (MG_CorrecSmooth != NULL) delete[] MG_CorrecSmooth;
   if (PlaneTag != NULL)        delete[] PlaneTag;
@@ -7844,24 +7833,6 @@ unsigned short CConfig::GetMarker_CfgFile_EngineExhaust(string val_marker) {
     if (Marker_EngineExhaust[iMarker_Engine] == Marker_CfgFile_TagBound[kMarker_All]) break;
   
   return kMarker_All;
-}
-
-void CConfig::SetnPeriodicIndex(unsigned short val_index) {
-
-  /*--- Store total number of transformations. ---*/
-  nPeriodic_Index = val_index;
-
-  /*--- Allocate memory for centers, angles, translations. ---*/
-  Periodic_Center    = new su2double*[nPeriodic_Index];
-  Periodic_Rotation  = new su2double*[nPeriodic_Index];
-  Periodic_Translate = new su2double*[nPeriodic_Index];
-  
-  for (unsigned long i = 0; i < nPeriodic_Index; i++) {
-    Periodic_Center[i]    = new su2double[3];
-    Periodic_Rotation[i]  = new su2double[3];
-    Periodic_Translate[i] = new su2double[3];
-  }
-  
 }
 
 unsigned short CConfig::GetMarker_Moving(string val_marker) {
