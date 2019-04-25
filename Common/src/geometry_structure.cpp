@@ -88,7 +88,7 @@ CGeometry::CGeometry(void) {
   newBound            = NULL;
   nNewElem_Bound      = NULL;
   Marker_All_SendRecv = NULL;
-
+  
   XCoordList.clear();
   Xcoord_plane.clear();
   Ycoord_plane.clear();
@@ -3748,7 +3748,7 @@ CPhysicalGeometry::CPhysicalGeometry(CConfig *config, unsigned short val_iZone, 
 }
 
 CPhysicalGeometry::CPhysicalGeometry(CGeometry *geometry,
-                                     CConfig   *config) {
+                                     CConfig *config) {
 
   /*--- Get rank and size. ---*/
 
@@ -5852,7 +5852,7 @@ void CPhysicalGeometry::LoadPoints(CConfig *config, CGeometry *geometry) {
     /*--- Set the starting point to the correct counter for this point. ---*/
 
     if (Local_Colors[iPoint] == (unsigned long)rank) {
-      jPoint = iOwned;
+        jPoint = iOwned;
     } else {
       jPoint = iGhost;
     }
@@ -5880,7 +5880,7 @@ void CPhysicalGeometry::LoadPoints(CConfig *config, CGeometry *geometry) {
     /*--- Increment the correct counter before moving to the next point. ---*/
 
     if (Local_Colors[iPoint] == (unsigned long)rank) {
-      iOwned++;
+        iOwned++;
     } else {
       iGhost++;
     }
@@ -5895,7 +5895,7 @@ void CPhysicalGeometry::LoadPoints(CConfig *config, CGeometry *geometry) {
 
   /*--- Set the value of Global_nPoint and Global_nPointDomain ---*/
 
-  unsigned long Local_nPoint       = nPoint;
+  unsigned long Local_nPoint = nPoint;
   unsigned long Local_nPointDomain = nPointDomain;
 
 #ifdef HAVE_MPI
@@ -5904,7 +5904,7 @@ void CPhysicalGeometry::LoadPoints(CConfig *config, CGeometry *geometry) {
   SU2_MPI::Allreduce(&Local_nPointDomain, &Global_nPointDomain, 1,
                      MPI_UNSIGNED_LONG, MPI_SUM, MPI_COMM_WORLD);
 #else
-  Global_nPoint       = Local_nPoint;
+  Global_nPoint = Local_nPoint;
   Global_nPointDomain = Local_nPointDomain;
 #endif
 
@@ -5989,206 +5989,206 @@ void CPhysicalGeometry::LoadVolumeElements(CConfig *config, CGeometry *geometry)
   elem  = new CPrimalGrid*[nElem];
 
   /*--- Store the elements of each type in the proper containers. ---*/
-  
+
   for (it = Tria_List.begin(); it != Tria_List.end(); it++) {
-    
+
     kElem = it->first;
     iElem = it->second;
-    
-    /*--- Transform the stored connectivity for this element from global
-     to local values on this rank. ---*/
-    
-    NODES_PER_ELEMENT = N_POINTS_TRIANGLE;
-    for (iNode = 0; iNode < NODES_PER_ELEMENT; iNode++) {
-      iGlobal_Index      = Conn_Tria[iElem*NODES_PER_ELEMENT+iNode];
-      Local_Nodes[iNode] = Global_to_Local_Point[iGlobal_Index];
-    }
-    
-    /*--- Create the element object. ---*/
-    
-    elem[jElem] = new CTriangle(Local_Nodes[0],
-                                Local_Nodes[1],
-                                Local_Nodes[2], 2);
-    
+
+      /*--- Transform the stored connectivity for this element from global
+       to local values on this rank. ---*/
+
+      NODES_PER_ELEMENT = N_POINTS_TRIANGLE;
+      for (iNode = 0; iNode < NODES_PER_ELEMENT; iNode++) {
+        iGlobal_Index      = Conn_Tria[iElem*NODES_PER_ELEMENT+iNode];
+        Local_Nodes[iNode] = Global_to_Local_Point[iGlobal_Index];
+      }
+
+      /*--- Create the element object. ---*/
+
+      elem[jElem] = new CTriangle(Local_Nodes[0],
+                                  Local_Nodes[1],
+                                  Local_Nodes[2], 2);
+
     elem[jElem]->SetGlobalIndex(kElem);
-    
-    /*--- Increment our local counters. ---*/
-    
-    jElem++; iElemTria++;
-    
-  }
-  
+
+      /*--- Increment our local counters. ---*/
+
+      jElem++; iElemTria++;
+
+    }
+
   /*--- Free memory as we go. ---*/
   
   Tria_List.clear();
-  
+
   for (it = Quad_List.begin(); it != Quad_List.end(); it++) {
     
     kElem = it->first;
     iElem = it->second;
-    
-    /*--- Transform the stored connectivity for this element from global
-     to local values on this rank. ---*/
-    
-    NODES_PER_ELEMENT = N_POINTS_QUADRILATERAL;
-    for (iNode = 0; iNode < NODES_PER_ELEMENT; iNode++) {
-      iGlobal_Index      = Conn_Quad[iElem*NODES_PER_ELEMENT+iNode];
-      Local_Nodes[iNode] = Global_to_Local_Point[iGlobal_Index];
-    }
-    
-    /*--- Create the element object. ---*/
-    
-    elem[jElem] = new CQuadrilateral(Local_Nodes[0],
-                                     Local_Nodes[1],
-                                     Local_Nodes[2],
-                                     Local_Nodes[3], 2);
-    
+
+      /*--- Transform the stored connectivity for this element from global
+       to local values on this rank. ---*/
+
+      NODES_PER_ELEMENT = N_POINTS_QUADRILATERAL;
+      for (iNode = 0; iNode < NODES_PER_ELEMENT; iNode++) {
+        iGlobal_Index      = Conn_Quad[iElem*NODES_PER_ELEMENT+iNode];
+        Local_Nodes[iNode] = Global_to_Local_Point[iGlobal_Index];
+      }
+
+      /*--- Create the element object. ---*/
+
+      elem[jElem] = new CQuadrilateral(Local_Nodes[0],
+                                       Local_Nodes[1],
+                                       Local_Nodes[2],
+                                       Local_Nodes[3], 2);
+
     elem[jElem]->SetGlobalIndex(kElem);
-    
-    /*--- Increment our local counters. ---*/
-    
-    jElem++; iElemQuad++;
-    
-  }
-  
+
+      /*--- Increment our local counters. ---*/
+
+      jElem++; iElemQuad++;
+
+    }
+
   /*--- Free memory as we go. ---*/
-  
+
   Quad_List.clear();
   
   for (it = Tetr_List.begin(); it != Tetr_List.end(); it++) {
     
     kElem = it->first;
     iElem = it->second;
-    
-    /*--- Transform the stored connectivity for this element from global
-     to local values on this rank. ---*/
-    
-    NODES_PER_ELEMENT = N_POINTS_TETRAHEDRON;
-    for (iNode = 0; iNode < NODES_PER_ELEMENT; iNode++) {
-      iGlobal_Index      = Conn_Tetr[iElem*NODES_PER_ELEMENT+iNode];
-      Local_Nodes[iNode] = Global_to_Local_Point[iGlobal_Index];
-    }
-    
-    /*--- Create the element object. ---*/
-    
-    elem[jElem] = new CTetrahedron(Local_Nodes[0],
-                                   Local_Nodes[1],
-                                   Local_Nodes[2],
-                                   Local_Nodes[3]);
-    
+
+      /*--- Transform the stored connectivity for this element from global
+       to local values on this rank. ---*/
+
+      NODES_PER_ELEMENT = N_POINTS_TETRAHEDRON;
+      for (iNode = 0; iNode < NODES_PER_ELEMENT; iNode++) {
+        iGlobal_Index      = Conn_Tetr[iElem*NODES_PER_ELEMENT+iNode];
+        Local_Nodes[iNode] = Global_to_Local_Point[iGlobal_Index];
+      }
+
+      /*--- Create the element object. ---*/
+
+      elem[jElem] = new CTetrahedron(Local_Nodes[0],
+                                     Local_Nodes[1],
+                                     Local_Nodes[2],
+                                     Local_Nodes[3]);
+
     elem[jElem]->SetGlobalIndex(kElem);
-    
-    /*--- Increment our local counters. ---*/
-    
-    jElem++; iElemTetr++;
-    
-  }
-  
+
+      /*--- Increment our local counters. ---*/
+
+      jElem++; iElemTetr++;
+
+    }
+
   /*--- Free memory as we go. ---*/
   
   Tetr_List.clear();
   
   for (it = Hexa_List.begin(); it != Hexa_List.end(); it++) {
-    
+
     kElem = it->first;
     iElem = it->second;
-    
-    /*--- Transform the stored connectivity for this element from global
-     to local values on this rank. ---*/
-    
-    NODES_PER_ELEMENT = N_POINTS_HEXAHEDRON;
-    for (iNode = 0; iNode < NODES_PER_ELEMENT; iNode++) {
-      iGlobal_Index      = Conn_Hexa[iElem*NODES_PER_ELEMENT+iNode];
-      Local_Nodes[iNode] = Global_to_Local_Point[iGlobal_Index];
-    }
-    
-    /*--- Create the element object. ---*/
-    
-    elem[jElem] = new CHexahedron(Local_Nodes[0],
-                                  Local_Nodes[1],
-                                  Local_Nodes[2],
-                                  Local_Nodes[3],
-                                  Local_Nodes[4],
-                                  Local_Nodes[5],
-                                  Local_Nodes[6],
-                                  Local_Nodes[7]);
-    
+
+      /*--- Transform the stored connectivity for this element from global
+       to local values on this rank. ---*/
+
+      NODES_PER_ELEMENT = N_POINTS_HEXAHEDRON;
+      for (iNode = 0; iNode < NODES_PER_ELEMENT; iNode++) {
+        iGlobal_Index      = Conn_Hexa[iElem*NODES_PER_ELEMENT+iNode];
+        Local_Nodes[iNode] = Global_to_Local_Point[iGlobal_Index];
+      }
+
+      /*--- Create the element object. ---*/
+
+      elem[jElem] = new CHexahedron(Local_Nodes[0],
+                                    Local_Nodes[1],
+                                    Local_Nodes[2],
+                                    Local_Nodes[3],
+                                    Local_Nodes[4],
+                                    Local_Nodes[5],
+                                    Local_Nodes[6],
+                                    Local_Nodes[7]);
+
     elem[jElem]->SetGlobalIndex(kElem);
-    
-    /*--- Increment our local counters. ---*/
-    
-    jElem++; iElemHexa++;
-    
-  }
-  
+
+      /*--- Increment our local counters. ---*/
+
+      jElem++; iElemHexa++;
+
+    }
+
   /*--- Free memory as we go. ---*/
   
   Hexa_List.clear();
-  
+
   for (it = Pris_List.begin(); it != Pris_List.end(); it++) {
     
     kElem = it->first;
     iElem = it->second;
-    
-    /*--- Transform the stored connectivity for this element from global
-     to local values on this rank. ---*/
-    
-    NODES_PER_ELEMENT = N_POINTS_PRISM;
-    for (iNode = 0; iNode < NODES_PER_ELEMENT; iNode++) {
-      iGlobal_Index      = Conn_Pris[iElem*NODES_PER_ELEMENT+iNode];
-      Local_Nodes[iNode] = Global_to_Local_Point[iGlobal_Index];
-    }
-    
-    /*--- Create the element object. ---*/
-    
-    elem[jElem] = new CPrism(Local_Nodes[0],
-                             Local_Nodes[1],
-                             Local_Nodes[2],
-                             Local_Nodes[3],
-                             Local_Nodes[4],
-                             Local_Nodes[5]);
-    
+
+      /*--- Transform the stored connectivity for this element from global
+       to local values on this rank. ---*/
+
+      NODES_PER_ELEMENT = N_POINTS_PRISM;
+      for (iNode = 0; iNode < NODES_PER_ELEMENT; iNode++) {
+        iGlobal_Index      = Conn_Pris[iElem*NODES_PER_ELEMENT+iNode];
+        Local_Nodes[iNode] = Global_to_Local_Point[iGlobal_Index];
+      }
+
+      /*--- Create the element object. ---*/
+
+      elem[jElem] = new CPrism(Local_Nodes[0],
+                               Local_Nodes[1],
+                               Local_Nodes[2],
+                               Local_Nodes[3],
+                               Local_Nodes[4],
+                               Local_Nodes[5]);
+
     elem[jElem]->SetGlobalIndex(kElem);
-    
-    /*--- Increment our local counters. ---*/
-    
-    jElem++; iElemPris++;
-    
-  }
-  
+
+      /*--- Increment our local counters. ---*/
+
+      jElem++; iElemPris++;
+
+    }
+
   /*--- Free memory as we go. ---*/
-  
+
   Pris_List.clear();
   
   for (it = Pyra_List.begin(); it != Pyra_List.end(); it++) {
     
     kElem = it->first;
     iElem = it->second;
-    
-    /*--- Transform the stored connectivity for this element from global
-     to local values on this rank. ---*/
-    
-    NODES_PER_ELEMENT = N_POINTS_PYRAMID;
-    for (iNode = 0; iNode < NODES_PER_ELEMENT; iNode++) {
-      iGlobal_Index      = Conn_Pyra[iElem*NODES_PER_ELEMENT+iNode];
-      Local_Nodes[iNode] = Global_to_Local_Point[iGlobal_Index];
-    }
-    
-    /*--- Create the element object. ---*/
-    
-    elem[jElem] = new CPyramid(Local_Nodes[0],
-                               Local_Nodes[1],
-                               Local_Nodes[2],
-                               Local_Nodes[3],
-                               Local_Nodes[4]);
-    
+
+      /*--- Transform the stored connectivity for this element from global
+       to local values on this rank. ---*/
+
+      NODES_PER_ELEMENT = N_POINTS_PYRAMID;
+      for (iNode = 0; iNode < NODES_PER_ELEMENT; iNode++) {
+        iGlobal_Index      = Conn_Pyra[iElem*NODES_PER_ELEMENT+iNode];
+        Local_Nodes[iNode] = Global_to_Local_Point[iGlobal_Index];
+      }
+
+      /*--- Create the element object. ---*/
+      
+      elem[jElem] = new CPyramid(Local_Nodes[0],
+                                 Local_Nodes[1],
+                                 Local_Nodes[2],
+                                 Local_Nodes[3],
+                                 Local_Nodes[4]);
+      
     elem[jElem]->SetGlobalIndex(kElem);
-    
-    /*--- Increment our local counters. ---*/
-    
-    jElem++; iElemPyra++;
-    
-  }
+
+      /*--- Increment our local counters. ---*/
+      
+      jElem++; iElemPyra++;
+      
+    }
   
   /*--- Free memory as we go. ---*/
   
@@ -9190,7 +9190,7 @@ void CPhysicalGeometry::Read_SU2_Format_Parallel(CConfig *config, string val_mes
       }
     }
 
-  
+      
   /*--- Prior to v7, periodicity was handled with an additional set
    of index values at the end of the mesh to inform SU2 how to
    translate or rotate the data between SEND_RECEIVE markers. This
@@ -9198,27 +9198,27 @@ void CPhysicalGeometry::Read_SU2_Format_Parallel(CConfig *config, string val_mes
    use a mesh with the old periodic BC format. ---*/
   
   while (getline (mesh_file, text_line) && (found_transform == false)) {
-    
-    position = text_line.find ("NPERIODIC=",0);
-    if (position != string::npos) {
+      
+      position = text_line.find ("NPERIODIC=",0);
+      if (position != string::npos) {
       unsigned short nPeriodic;
-      
-      /*--- Set bool signifying that periodic transormations were found ---*/
-      found_transform = true;
-      
+        
+        /*--- Set bool signifying that periodic transormations were found ---*/
+        found_transform = true;
+        
       /*--- Check for more than one transformation (the old format) and
        throw an error for the user if so. ---*/
-      text_line.erase (0,10); nPeriodic = atoi(text_line.c_str());
-      if (rank == MASTER_NODE) {
-        if (nPeriodic - 1 != 0)
-          SU2_MPI::Error(string("Mesh file contains outdated periodic format!\n\n") +
-                         string("For SU2 v7.0.0 and later, preprocessing of periodic grids by SU2_MSH\n") +
-                         string("is no longer necessary. Please use the original mesh file (prior to SU2_MSH)\n") +
-                         string("with the same MARKER_PERIODIC definition in the configuration file.") , CURRENT_FUNCTION);
-      }
+        text_line.erase (0,10); nPeriodic = atoi(text_line.c_str());
+        if (rank == MASTER_NODE) {
+          if (nPeriodic - 1 != 0)
+            SU2_MPI::Error(string("Mesh file contains outdated periodic format!\n\n") +
+                           string("For SU2 v7.0.0 and later, preprocessing of periodic grids by SU2_MSH\n") +
+                           string("is no longer necessary. Please use the original mesh file (prior to SU2_MSH)\n") +
+                           string("with the same MARKER_PERIODIC definition in the configuration file.") , CURRENT_FUNCTION);
+        }
+          }
+          
     }
-    
-  }
   
   /*--- Close the input file ---*/
   
