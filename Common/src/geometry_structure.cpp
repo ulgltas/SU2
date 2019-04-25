@@ -88,7 +88,7 @@ CGeometry::CGeometry(void) {
   newBound            = NULL;
   nNewElem_Bound      = NULL;
   Marker_All_SendRecv = NULL;
-  
+
   XCoordList.clear();
   Xcoord_plane.clear();
   Ycoord_plane.clear();
@@ -3748,7 +3748,7 @@ CPhysicalGeometry::CPhysicalGeometry(CConfig *config, unsigned short val_iZone, 
 }
 
 CPhysicalGeometry::CPhysicalGeometry(CGeometry *geometry,
-                                     CConfig *config) {
+                                     CConfig   *config) {
 
   /*--- Get rank and size. ---*/
 
@@ -5852,7 +5852,7 @@ void CPhysicalGeometry::LoadPoints(CConfig *config, CGeometry *geometry) {
     /*--- Set the starting point to the correct counter for this point. ---*/
 
     if (Local_Colors[iPoint] == (unsigned long)rank) {
-        jPoint = iOwned;
+      jPoint = iOwned;
     } else {
       jPoint = iGhost;
     }
@@ -5880,7 +5880,7 @@ void CPhysicalGeometry::LoadPoints(CConfig *config, CGeometry *geometry) {
     /*--- Increment the correct counter before moving to the next point. ---*/
 
     if (Local_Colors[iPoint] == (unsigned long)rank) {
-        iOwned++;
+      iOwned++;
     } else {
       iGhost++;
     }
@@ -5895,7 +5895,7 @@ void CPhysicalGeometry::LoadPoints(CConfig *config, CGeometry *geometry) {
 
   /*--- Set the value of Global_nPoint and Global_nPointDomain ---*/
 
-  unsigned long Local_nPoint = nPoint;
+  unsigned long Local_nPoint       = nPoint;
   unsigned long Local_nPointDomain = nPointDomain;
 
 #ifdef HAVE_MPI
@@ -5904,7 +5904,7 @@ void CPhysicalGeometry::LoadPoints(CConfig *config, CGeometry *geometry) {
   SU2_MPI::Allreduce(&Local_nPointDomain, &Global_nPointDomain, 1,
                      MPI_UNSIGNED_LONG, MPI_SUM, MPI_COMM_WORLD);
 #else
-  Global_nPoint = Local_nPoint;
+  Global_nPoint       = Local_nPoint;
   Global_nPointDomain = Local_nPointDomain;
 #endif
 
@@ -9190,7 +9190,7 @@ void CPhysicalGeometry::Read_SU2_Format_Parallel(CConfig *config, string val_mes
       }
     }
 
-      
+  
   /*--- Prior to v7, periodicity was handled with an additional set
    of index values at the end of the mesh to inform SU2 how to
    translate or rotate the data between SEND_RECEIVE markers. This
@@ -9198,27 +9198,27 @@ void CPhysicalGeometry::Read_SU2_Format_Parallel(CConfig *config, string val_mes
    use a mesh with the old periodic BC format. ---*/
   
   while (getline (mesh_file, text_line) && (found_transform == false)) {
-      
-      position = text_line.find ("NPERIODIC=",0);
-      if (position != string::npos) {
+    
+    position = text_line.find ("NPERIODIC=",0);
+    if (position != string::npos) {
       unsigned short nPeriodic;
-        
-        /*--- Set bool signifying that periodic transormations were found ---*/
-        found_transform = true;
-        
+      
+      /*--- Set bool signifying that periodic transormations were found ---*/
+      found_transform = true;
+      
       /*--- Check for more than one transformation (the old format) and
        throw an error for the user if so. ---*/
-        text_line.erase (0,10); nPeriodic = atoi(text_line.c_str());
-        if (rank == MASTER_NODE) {
-          if (nPeriodic - 1 != 0)
-            SU2_MPI::Error(string("Mesh file contains outdated periodic format!\n\n") +
-                           string("For SU2 v7.0.0 and later, preprocessing of periodic grids by SU2_MSH\n") +
-                           string("is no longer necessary. Please use the original mesh file (prior to SU2_MSH)\n") +
-                           string("with the same MARKER_PERIODIC definition in the configuration file.") , CURRENT_FUNCTION);
-        }
-          }
-          
+      text_line.erase (0,10); nPeriodic = atoi(text_line.c_str());
+      if (rank == MASTER_NODE) {
+        if (nPeriodic - 1 != 0)
+          SU2_MPI::Error(string("Mesh file contains outdated periodic format!\n\n") +
+                         string("For SU2 v7.0.0 and later, preprocessing of periodic grids by SU2_MSH\n") +
+                         string("is no longer necessary. Please use the original mesh file (prior to SU2_MSH)\n") +
+                         string("with the same MARKER_PERIODIC definition in the configuration file.") , CURRENT_FUNCTION);
+      }
     }
+    
+  }
   
   /*--- Close the input file ---*/
   
