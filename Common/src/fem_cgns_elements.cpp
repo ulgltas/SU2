@@ -2,7 +2,7 @@
  * \file fem_cgns_elements.cpp
  * \brief CGNS element definitions and conversions to the SU2 standard.
  * \author E. van der Weide
- * \version 7.0.0 "Blackbird"
+ * \version 7.0.1 "Blackbird"
  *
  * SU2 Project Website: https://su2code.github.io
  *
@@ -25,9 +25,16 @@
  * License along with SU2. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../include/geometry_structure.hpp"
-
 #ifdef HAVE_CGNS
+#include "../include/fem_cgns_elements.hpp"
+#include "../include/geometry_structure_fem_part.hpp"
+#include "../include/mpi_structure.hpp"
+#include "../include/datatype_structure.hpp"
+
+#include <cmath>
+#include <climits>
+#include <algorithm>
+
 #if CGNS_VERSION >= 3300
 
 void CCGNSElementType::DetermineMetaData(const unsigned short nDim,
