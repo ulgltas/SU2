@@ -27,6 +27,7 @@
 
 
  #include "../include/drivers/CDriver.hpp"
+ #include "../include/drivers/CSinglezoneDriver.hpp"
 
 void CDriver::PythonInterface_Preprocessing(CConfig **config, CGeometry ****geometry, CSolver *****solver){
 
@@ -1228,3 +1229,53 @@ vector<passivedouble> CDriver::GetVertex_UndeformedCoord(unsigned short iMarker,
   return MeshCoord_passive;
 
 }
+
+void CSinglezoneDriver::SetInitialMesh() {
+
+  unsigned long iPoint;
+
+  StaticMeshUpdate();
+
+  /*--- Propagate the initial deformation to the past ---*/
+  for (iMesh = 0; iMesh <= config_container[ZONE_0]->GetnMGLevels(); iMesh++) {
+      for(iPoint = 0; iPoint < geometry_container[ZONE_0][INST_0][iMesh]->GetnPoint(); iPoint++) {
+      geometry_container[ZONE_0][INST_0][iMesh]->node[iPoint]->SetVolume_n();
+      geometry_container[ZONE_0][INST_0][iMesh]->node[iPoint]->SetVolume_nM1();
+      geometry_container[ZONE_0][INST_0][iMesh]->node[iPoint]->SetCoord_n();
+      geometry_container[ZONE_0][INST_0][iMesh]->node[iPoint]->SetCoord_n1();
+    }
+  }
+}
+
+void CSinglezoneDriver::StaticMeshUpdate() {
+
+  int rank = MASTER_NODE;
+  CMeshSolver *solver; 
+  solver = (CMeshSolver *) solver_container[ZONE_0][INST_0][MESH_0][MESH_SOL];
+
+#ifdef HAVE_MPI
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif
+
+  
+  if(rank == MASTER_NODE) cout << "Deforming the volume grid." << endl;
+  iteration_container[ZONE_0][INST_0]->SetMesh_Deformation(geometry_container[ZONE_0][INST_0],
+                                                            solver_container[ZONE_0][INST_0][MESH_0],
+                                                            numerics_container[ZONE_0][INST_0][MESH_0],
+                                                            config_container[ZONE_0],
+                                                            NONE);
+
+  if(rank == MASTER_NODE) cout << "Static grid deformation: grid velocity set to 0" << endl;
+  /*--- Start the solution so that U_0=0 iff it is in the time domain ---*/
+  if (config_container[ZONE_0]->GetTime_Domain())
+  {
+    solver->SetDualTime_Mesh();
+    solver->SetDualTime_Mesh(); // Set current mesh as older meshes
+    solver->ComputeGridVelocity(geometry_container[ZONE_0][INST_0][MESH_0], config_container[ZONE_0]);
+  }
+  if(rank == MASTER_NODE) cout << "Updating multigrid structure." << endl;
+
+  grid_movement[ZONE_0][INST_0]->UpdateMultiGrid(geometry_container[ZONE_0][INST_0], config_container[ZONE_0]);
+
+}
+

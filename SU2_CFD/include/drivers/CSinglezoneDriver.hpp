@@ -88,6 +88,16 @@ public:
   void Output(unsigned long TimeIter);
 
   /*!
+   * \brief Perform a static mesh deformation, no grid velocity computation during the first iteration.
+   */
+  void SetInitialMesh();
+
+  /*!
+   * \brief Perform a static mesh deformation, no grid velocity computation but update of the multigrid structure.
+   */
+  void StaticMeshUpdate();
+
+  /*!
    * \brief Perform a dynamic mesh deformation, included grid velocity computation and the update of the multigrid structure.
    */
   void DynamicMeshUpdate(unsigned long TimeIter);
