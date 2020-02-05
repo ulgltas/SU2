@@ -1250,7 +1250,8 @@ void CSinglezoneDriver::SetInitialMesh() {
 void CSinglezoneDriver::StaticMeshUpdate() {
 
   int rank = MASTER_NODE;
-  CMeshSolver *solver; 
+  CMeshSolver *solver;
+  /*--- Specify that the mesh solver is an instance of CMeshSolver ---*/
   solver = (CMeshSolver *) solver_container[ZONE_0][INST_0][MESH_0][MESH_SOL];
 
 #ifdef HAVE_MPI
@@ -1269,13 +1270,17 @@ void CSinglezoneDriver::StaticMeshUpdate() {
   /*--- Start the solution so that U_0=0 iff it is in the time domain ---*/
   if (config_container[ZONE_0]->GetTime_Domain())
   {
+    /*--- Update older meshes to use initial deformation: for dual time 2nd order $U_0=\frac{3*X_0-4*X_{-1}+X_{-2}}{\Delta t}$ ---*/
     solver->SetDualTime_Mesh();
-    solver->SetDualTime_Mesh(); // Set current mesh as older meshes
-    solver->ComputeGridVelocity(geometry_container[ZONE_0][INST_0][MESH_0], config_container[ZONE_0]);
+    solver->SetDualTime_Mesh();
+    /*--- Compute grid velocities here: ComputeGridVelocity is private ---*/
+    solver->DeformMesh(geometry_container[ZONE_0][INST_0], numerics_container[ZONE_0][INST_0][MESH_0][MESH_SOL], config_container[ZONE_0]);
   }
-  if(rank == MASTER_NODE) cout << "Updating multigrid structure." << endl;
-
-  grid_movement[ZONE_0][INST_0]->UpdateMultiGrid(geometry_container[ZONE_0][INST_0], config_container[ZONE_0]);
+  else
+  {
+    if(rank == MASTER_NODE) cout << "Updating multigrid structure." << endl;
+    grid_movement[ZONE_0][INST_0]->UpdateMultiGrid(geometry_container[ZONE_0][INST_0], config_container[ZONE_0]);
+  }
 
 }
 
