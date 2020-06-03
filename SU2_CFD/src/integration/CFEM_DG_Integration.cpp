@@ -2,7 +2,7 @@
  * \file CFEM_DG_Integration.cpp
  * \brief Definition of time and space integration for the DG solver.
  * \author F. Palacios, T. Economon
- * \version 7.0.2 "Blackbird"
+ * \version 7.0.5 "Blackbird"
  *
  * SU2 Project Website: https://su2code.github.io
  *
@@ -28,7 +28,7 @@
 #include "../../include/integration/CFEM_DG_Integration.hpp"
 
 
-CFEM_DG_Integration::CFEM_DG_Integration(CConfig *config) : CIntegration(config) { }
+CFEM_DG_Integration::CFEM_DG_Integration() : CIntegration() { }
 
 void CFEM_DG_Integration::SingleGrid_Iteration(CGeometry ****geometry,
                                                CSolver *****solver_container,
@@ -154,10 +154,10 @@ void CFEM_DG_Integration::Space_Integration(CGeometry *geometry,
         if iStep == 0, set the old solution (working solution for the DG part),
         and if needed, the new solution. ---*/
   if (iStep == 0) {
-    solver_container[MainSolver]->Set_OldSolution(geometry);
+    solver_container[MainSolver]->Set_OldSolution();
 
     if (config->GetKind_TimeIntScheme() == CLASSICAL_RK4_EXPLICIT) {
-      solver_container[MainSolver]->Set_NewSolution(geometry);
+      solver_container[MainSolver]->Set_NewSolution();
     }
   }
 

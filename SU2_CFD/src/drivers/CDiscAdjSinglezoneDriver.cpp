@@ -2,11 +2,11 @@
  * \file driver_adjoint_singlezone.cpp
  * \brief The main subroutines for driving adjoint single-zone problems.
  * \author R. Sanchez
- * \version 7.0.2 "Blackbird"
+ * \version 7.0.5 "Blackbird"
  *
  * SU2 Project Website: https://su2code.github.io
  *
- * The SU2 Project is maintained by the SU2 Foundation 
+ * The SU2 Project is maintained by the SU2 Foundation
  * (http://su2foundation.org)
  *
  * Copyright 2012-2020, SU2 Contributors (cf. AUTHORS.md)
@@ -27,6 +27,8 @@
 
 #include "../../include/drivers/CDiscAdjSinglezoneDriver.hpp"
 #include "../../include/output/tools/CWindowingTools.hpp"
+#include "../../include/output/COutputFactory.hpp"
+#include "../../include/output/COutputLegacy.hpp"
 
 CDiscAdjSinglezoneDriver::CDiscAdjSinglezoneDriver(char* confFile,
                                                    unsigned short val_nZone,
@@ -68,12 +70,12 @@ CDiscAdjSinglezoneDriver::CDiscAdjSinglezoneDriver(char* confFile,
       cout << "Direct iteration: Euler/Navier-Stokes/RANS equation." << endl;
     if (turbo) {
       direct_iteration = new CTurboIteration(config);
-      output_legacy = new COutputLegacy(config_container[ZONE_0]);
+      output_legacy = COutputFactory::createLegacyOutput(config_container[ZONE_0]);
     }
     else       direct_iteration = new CFluidIteration(config);
-    if (compressible) direct_output = new CFlowCompOutput(config, nDim);
-    else direct_output = new CFlowIncOutput(config, nDim);
-    MainVariables = FLOW_CONS_VARS;
+    if (compressible) direct_output = COutputFactory::createOutput(EULER, config, nDim);
+    else direct_output =  COutputFactory::createOutput(INC_EULER, config, nDim);
+    MainVariables = SOLUTION_VARIABLES;
     if (mesh_def) SecondaryVariables = MESH_DEFORM;
     else          SecondaryVariables = MESH_COORDS;
     break;
@@ -82,8 +84,8 @@ CDiscAdjSinglezoneDriver::CDiscAdjSinglezoneDriver(char* confFile,
     if (rank == MASTER_NODE)
       cout << "Direct iteration: Euler/Navier-Stokes/RANS equation." << endl;
     direct_iteration = new CFEMFluidIteration(config);
-    direct_output = new CFlowCompFEMOutput(config, nDim);
-    MainVariables = FLOW_CONS_VARS;
+    direct_output = COutputFactory::createOutput(FEM_EULER, config, nDim);
+    MainVariables = SOLUTION_VARIABLES;
     SecondaryVariables = MESH_COORDS;
     break;
 
@@ -91,8 +93,8 @@ CDiscAdjSinglezoneDriver::CDiscAdjSinglezoneDriver(char* confFile,
     if (rank == MASTER_NODE)
       cout << "Direct iteration: elasticity equation." << endl;
     direct_iteration = new CFEAIteration(config);
-    direct_output = new CElasticityOutput(config, nDim);
-    MainVariables = FEA_DISP_VARS;
+    direct_output = COutputFactory::createOutput(FEM_ELASTICITY, config, nDim);
+    MainVariables = SOLUTION_VARIABLES;
     SecondaryVariables = MESH_COORDS;
     break;
 
@@ -100,8 +102,8 @@ CDiscAdjSinglezoneDriver::CDiscAdjSinglezoneDriver(char* confFile,
     if (rank == MASTER_NODE)
       cout << "Direct iteration: heat equation." << endl;
     direct_iteration = new CHeatIteration(config);
-    direct_output = new CHeatOutput(config, nDim);
-    MainVariables = FLOW_CONS_VARS;
+    direct_output = COutputFactory::createOutput(HEAT_EQUATION, config, nDim);
+    MainVariables = SOLUTION_VARIABLES;
     SecondaryVariables = MESH_COORDS;
     break;
 
@@ -112,6 +114,9 @@ CDiscAdjSinglezoneDriver::CDiscAdjSinglezoneDriver(char* confFile,
 }
 
 CDiscAdjSinglezoneDriver::~CDiscAdjSinglezoneDriver(void) {
+
+  delete direct_iteration;
+  delete direct_output;
 
 }
 
