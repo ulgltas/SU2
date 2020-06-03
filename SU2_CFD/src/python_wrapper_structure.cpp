@@ -1235,12 +1235,11 @@ void CSinglezoneDriver::SetInitialMesh() {
 
   /*--- Propagate the initial deformation to the past ---*/
   for (iMesh = 0; iMesh <= config_container[ZONE_0]->GetnMGLevels(); iMesh++) {
-      for(iPoint = 0; iPoint < geometry_container[ZONE_0][INST_0][iMesh]->GetnPoint(); iPoint++) {
-      geometry_container[ZONE_0][INST_0][iMesh]->node[iPoint]->SetVolume_n();
-      geometry_container[ZONE_0][INST_0][iMesh]->node[iPoint]->SetVolume_nM1();
-      geometry_container[ZONE_0][INST_0][iMesh]->node[iPoint]->SetCoord_n();
-      geometry_container[ZONE_0][INST_0][iMesh]->node[iPoint]->SetCoord_n1();
-    }
+    geometry_container[ZONE_0][INST_0][iMesh]->nodes->SetVolume_n();
+    geometry_container[ZONE_0][INST_0][iMesh]->nodes->SetVolume_nM1();
+    geometry_container[ZONE_0][INST_0][iMesh]->nodes->SetCoord_n();
+    geometry_container[ZONE_0][INST_0][iMesh]->nodes->SetCoord_n1();
+    
   }
 }
 
