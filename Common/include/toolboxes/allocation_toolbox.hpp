@@ -68,7 +68,7 @@ inline T* aligned_alloc(size_t alignment, size_t size) noexcept
 
   void* ptr = nullptr;
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) || __GNUC__<=7
   if(::posix_memalign(&ptr, alignment, size) != 0)
   {
     ptr = nullptr;
