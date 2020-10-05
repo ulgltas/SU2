@@ -721,6 +721,12 @@ public:
   map<string, string> GetAllBoundaryMarkersType();
 
   /*!
+   * \brief Get all the boundary markers tags with their associated types.
+   * \return List of boundary markers tags with their types.
+   */
+  string GetSurface_Filename();
+
+  /*!
    * \brief Set the mesh displacement for the elasticity mesh solver.
    * \param[in] iMarker - Marker identifier.
    * \param[in] iVertex - Vertex identifier.

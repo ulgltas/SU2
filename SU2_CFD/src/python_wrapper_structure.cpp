@@ -29,6 +29,8 @@
  #include "../include/drivers/CDriver.hpp"
  #include "../include/drivers/CSinglezoneDriver.hpp"
  #include "../include/solvers/CMeshSolver.hpp"
+ #include "../include/iteration/CIteration.hpp"
+ #include "../include/output/COutput.hpp"
 
 void CDriver::PythonInterface_Preprocessing(CConfig **config, CGeometry ****geometry, CSolver *****solver){
 
@@ -1302,5 +1304,10 @@ void CDriver::SetInlet_Angle(unsigned short iMarker, passivedouble alpha){
     solver_container[ZONE_0][INST_0][MESH_0][FLOW_SOL]->SetInlet_FlowDir(iMarker, iVertex, 1, sin(alpha_rad));
   }
 
+}
+
+string CDriver::GetSurface_Filename(){
+
+  return output_container[ZONE_0]->GetSurface_Filename();
 }
 
