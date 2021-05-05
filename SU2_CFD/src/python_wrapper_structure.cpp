@@ -827,22 +827,6 @@ void CDriver::SetMeshDisplacement(unsigned short iMarker, unsigned long iVertex,
 
 }
 
-void CSinglezoneDriver::SetInitialMesh() {
-
-  unsigned long iPoint;
-
-  StaticMeshUpdate();
-
-  /*--- Propagate the initial deformation to the past ---*/
-  for (iMesh = 0; iMesh <= config_container[ZONE_0]->GetnMGLevels(); iMesh++) {
-    geometry_container[ZONE_0][INST_0][iMesh]->nodes->SetVolume_n();
-    geometry_container[ZONE_0][INST_0][iMesh]->nodes->SetVolume_nM1();
-    geometry_container[ZONE_0][INST_0][iMesh]->nodes->SetCoord_n();
-    geometry_container[ZONE_0][INST_0][iMesh]->nodes->SetCoord_n1();
-    
-  }
-}
-
 void CSinglezoneDriver::StaticMeshUpdate() {
 
   int rank = MASTER_NODE;
