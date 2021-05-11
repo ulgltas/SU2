@@ -1,4 +1,4 @@
-﻿/*!
+/*!
  * \file driver_structure.hpp
  * \brief Headers of the main subroutines for driving single or multi-zone problems.
  *        The subroutines and functions are in the <i>driver_structure.cpp</i> file.
@@ -577,8 +577,9 @@ public:
    * \param[in] DispX - Value of the mesh displacement in the direction X.
    * \param[in] DispY - Value of the mesh displacement in the direction Y.
    * \param[in] DispZ - Value of the mesh displacement in the direction Z.
+   * \param[in] iInst - Instance identifier.
    */
-  void SetMeshDisplacement(unsigned short iMarker, unsigned long iVertex, passivedouble DispX, passivedouble DispY, passivedouble DispZ);
+  void SetMeshDisplacement(unsigned short iMarker, unsigned long iVertex, passivedouble DispX, passivedouble DispY, passivedouble DispZ, unsigned short iInst = INST_0);
 
   /*!
    * \brief Communicate the boundary mesh displacements in a python call
@@ -643,8 +644,9 @@ public:
    * strategy is in place).
    * \param[in] iMarker - Marker identifier.
    * \param[in] iVertex - Vertex identifier.
+   * \param[in] iInst - Instance identifier.
    */
-  vector<passivedouble> GetFlowLoad(unsigned short iMarker, unsigned long iVertex) const;
+  vector<passivedouble> GetFlowLoad(unsigned short iMarker, unsigned long iVertex, unsigned short iInst = INST_0) const;
 
   /*!
    * \brief Set the adjoint of the flow tractions (from the extra step -
@@ -928,4 +930,19 @@ public:
    * \brief Reset the convergence flag (set to false) of the solver for the Harmonic Balance.
    */
   void ResetConvergence() override;
+
+  /*!
+   * \brief Perform a static mesh deformation, without considering grid velocity.
+   */
+  virtual void StaticMeshUpdate();
+
+  /*!
+   * \brief Postprocess Harmonic Balance iteration.
+   */
+  virtual void Postprocess();
+
+  /*!
+   * \brief Return number of time instances.
+   */
+  unsigned short GetHB_Instances() {return nInstHB;};
 };

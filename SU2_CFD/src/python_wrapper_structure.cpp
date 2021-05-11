@@ -28,7 +28,6 @@
 
 #include "../include/drivers/CDriver.hpp"
 #include "../include/drivers/CSinglezoneDriver.hpp"
-#include "../include/drivers/CDriver.hpp"
 #include "../include/solvers/CMeshSolver.hpp"
 #include "../include/iteration/CIteration.hpp"
 #include "../include/output/COutput.hpp"
@@ -812,7 +811,7 @@ void CDriver::SetSourceTerm_DispAdjoint(unsigned short iMarker, unsigned long iV
 /* Functions related to mesh deformation */
 ////////////////////////////////////////////////////////////////////////////////
 
-void CDriver::SetMeshDisplacement(unsigned short iMarker, unsigned long iVertex, passivedouble DispX, passivedouble DispY, passivedouble DispZ) {
+void CDriver::SetMeshDisplacement(unsigned short iMarker, unsigned long iVertex, passivedouble DispX, passivedouble DispY, passivedouble DispZ, unsigned short iInst) {
 
   unsigned long iPoint;
   su2double MeshDispl[3] =  {0.0,0.0,0.0};
@@ -821,9 +820,9 @@ void CDriver::SetMeshDisplacement(unsigned short iMarker, unsigned long iVertex,
   MeshDispl[1] = DispY;
   MeshDispl[2] = DispZ;
 
-  iPoint = geometry_container[ZONE_0][INST_0][MESH_0]->vertex[iMarker][iVertex]->GetNode();
+  iPoint = geometry_container[ZONE_0][iInst][MESH_0]->vertex[iMarker][iVertex]->GetNode();
 
-  solver_container[ZONE_0][INST_0][MESH_0][MESH_SOL]->GetNodes()->SetBound_Disp(iPoint,MeshDispl);
+  solver_container[ZONE_0][iInst][MESH_0][MESH_SOL]->GetNodes()->SetBound_Disp(iPoint,MeshDispl);
 
 }
 
@@ -864,6 +863,53 @@ void CSinglezoneDriver::StaticMeshUpdate() {
 
 }
 
+
+void CHBDriver::StaticMeshUpdate() {
+
+  int rank = MASTER_NODE;
+
+#ifdef HAVE_MPI
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+#endif
+
+  su2double GridVel;
+  CMeshSolver *mesh_solver;
+  for(iZone = 0; iZone < nZone; iZone++) {
+    if(rank == MASTER_NODE) cout << " Deforming the volume grid." << endl;
+    ComputeHB_Operator();
+    for (iInst = 0; iInst < nInstHB; iInst++)
+    {
+      iteration_container[ZONE_0][iInst]->SetMesh_Deformation(geometry_container[ZONE_0][iInst],
+                                                            solver_container[ZONE_0][iInst][MESH_0],
+                                                            numerics_container[ZONE_0][iInst][MESH_0],
+                                                            config_container[ZONE_0],
+                                                            NONE);
+    }
+    
+    for(iInst = 0; iInst < nInstHB; iInst++) {
+      
+      for (unsigned long jPoint = 0; jPoint < geometry_container[iZone][INST_0][MESH_0]->GetnPoint(); jPoint++) {
+        for (unsigned short iDim = 0; iDim < nDim; iDim++) {
+          GridVel = 0.0;
+          for (unsigned int kInst = 0; kInst < nInstHB; kInst++) {
+            const su2double* Disp = geometry_container[iZone][kInst][MESH_0]->nodes->GetCoord(jPoint);
+            GridVel += Disp[iDim]*D[iInst][kInst];
+          }
+          geometry_container[iZone][iInst][MESH_0]->nodes->SetGridVel(jPoint, iDim, GridVel);
+        }
+      }
+      /*--- The velocity was computed for nPointDomain, now we communicate it. ---*/
+      geometry_container[iZone][iInst][MESH_0]->InitiateComms(geometry_container[iZone][iInst][MESH_0], config_container[iZone], GRID_VELOCITY);
+      geometry_container[iZone][iInst][MESH_0]->CompleteComms(geometry_container[iZone][iInst][MESH_0], config_container[iZone], GRID_VELOCITY);
+    }
+
+    if(rank == MASTER_NODE) cout << " Updating multigrid structure." << endl;
+    for(unsigned int jInst = 0; jInst < nInstHB; jInst++) {
+      grid_movement[iZone][jInst]->UpdateMultiGrid(geometry_container[iZone][jInst], config_container[iZone]);
+    }
+  }
+}
+
 void CDriver::CommunicateMeshDisplacement(void) {
 
   solver_container[ZONE_0][INST_0][MESH_0][MESH_SOL]->InitiateComms(geometry_container[ZONE_0][INST_0][MESH_0],
@@ -877,13 +923,13 @@ void CDriver::CommunicateMeshDisplacement(void) {
 /* Functions related to flow loads */
 ////////////////////////////////////////////////////////////////////////////////
 
-vector<passivedouble> CDriver::GetFlowLoad(unsigned short iMarker, unsigned long iVertex) const {
+vector<passivedouble> CDriver::GetFlowLoad(unsigned short iMarker, unsigned long iVertex, unsigned short iInst) const {
 
   vector<su2double> FlowLoad(3, 0.0);
   vector<passivedouble> FlowLoad_passive(3, 0.0);
 
-  CSolver *solver = solver_container[ZONE_0][INST_0][MESH_0][FLOW_SOL];
-  CGeometry *geometry = geometry_container[ZONE_0][INST_0][MESH_0];
+  CSolver *solver = solver_container[ZONE_0][iInst][MESH_0][FLOW_SOL];
+  CGeometry *geometry = geometry_container[ZONE_0][iInst][MESH_0];
 
   if (config_container[ZONE_0]->GetSolid_Wall(iMarker)) {
     FlowLoad[0] = solver->GetVertexTractions(iMarker, iVertex, 0);
