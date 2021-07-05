@@ -57,7 +57,7 @@ pySU2_INCLUDE = -I${abs_top_builddir}/Common/include \
 
 PY_INCLUDE = ${PYTHON_INCLUDE} -I${MPI4PY_INCLUDE}
 
-PY_LIB = ${PYTHON_LIBS} \
+PY_LIB = ${PYTHON_LIB} \
          -L${PYTHON_EXEC_PREFIX}/lib \
          -L/usr/lib \
          -L/usr/lib/x86_64-linux-gnu

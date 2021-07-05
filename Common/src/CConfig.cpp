@@ -8407,7 +8407,8 @@ bool CConfig::GetVolumetric_Movement() const {
   if (GetSurface_Movement(AEROELASTIC) ||
       GetSurface_Movement(AEROELASTIC_RIGID_MOTION)||
       GetSurface_Movement(EXTERNAL) ||
-      GetSurface_Movement(EXTERNAL_ROTATION)){
+      GetSurface_Movement(EXTERNAL_ROTATION) ||
+      GetSurface_Movement(DEFORMING)){
     volumetric_movement = true;
   }
 

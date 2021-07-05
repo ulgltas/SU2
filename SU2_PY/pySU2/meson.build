@@ -21,6 +21,11 @@ swig_gen = generator(
 wrapper_deps = [
     python.dependency(embed: true),
 ]
+if build_machine.system() == 'darwin'
+    wrapper_suffix = 'so'
+else
+    wrapper_suffix = []
+endif
 
 if get_option('enable-normal')
   cpp_source = swig_gen.process('pySU2.i')
@@ -33,7 +38,8 @@ if get_option('enable-normal')
       include_directories : mpi4py_include,
       cpp_args : [default_warning_flags,su2_cpp_args],
       name_prefix : '',
-      install_dir: 'bin'
+      install_dir: 'bin',
+      name_suffix: wrapper_suffix
   )
 meson.add_install_script('install.sh', meson.current_build_dir(), 'pysu2.py')
 endif
@@ -49,7 +55,8 @@ if get_option('enable-autodiff')
       include_directories : mpi4py_include,
       cpp_args : [default_warning_flags, su2_cpp_args, codi_rev_args],
       name_prefix : '',
-      install_dir: 'bin'
+      install_dir: 'bin',
+      name_suffix: wrapper_suffix
   )
 meson.add_install_script('install.sh', meson.current_build_dir(), 'pysu2ad.py')
 endif

@@ -71,7 +71,7 @@ inline T* aligned_alloc(size_t alignment, size_t size) noexcept
 
   void* ptr = nullptr;
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) || (!defined(_WIN32) && !defined(_GLIBCXX_HAVE_ALIGNED_ALLOC))
   if(::posix_memalign(&ptr, alignment, size) != 0)
   {
     ptr = nullptr;
