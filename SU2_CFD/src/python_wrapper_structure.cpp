@@ -868,7 +868,7 @@ void CSinglezoneDriver::StaticMeshUpdate() {
                                                             solver_container[ZONE_0][INST_0][MESH_0],
                                                             numerics_container[ZONE_0][INST_0][MESH_0],
                                                             config_container[ZONE_0],
-                                                            NONE);
+                                                            RECORDING::CLEAR_INDICES);
 
   if(rank == MASTER_NODE) cout << "Static grid deformation: grid velocity set to 0" << endl;
   /*--- Start the solution so that U_0=0 iff it is in the time domain ---*/
@@ -908,7 +908,7 @@ void CHBDriver::StaticMeshUpdate() {
                                                             solver_container[ZONE_0][iInst][MESH_0],
                                                             numerics_container[ZONE_0][iInst][MESH_0],
                                                             config_container[ZONE_0],
-                                                            NONE);
+                                                            RECORDING::CLEAR_INDICES);
     }
     
     for(iInst = 0; iInst < nInstHB; iInst++) {
