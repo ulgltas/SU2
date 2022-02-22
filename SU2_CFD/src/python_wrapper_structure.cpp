@@ -218,10 +218,18 @@ vector<passivedouble> CDriver::GetInitialMeshCoord(unsigned short iMarker, unsig
 
   vector<su2double> coord(3,0.0);
   vector<passivedouble> coord_passive(3, 0.0);
+  CFEASolver *mesh_solver;
+
+  if (config_container[ZONE_0]->GetKind_Solver() == FEM_ELASTICITY || config_container[ZONE_0]->GetKind_Solver() == DISC_ADJ_FEM){
+     mesh_solver = (CFEASolver *) solver_container[ZONE_0][INST_0][MESH_0][FEA_SOL];
+  }
+  else {
+    mesh_solver = (CMeshSolver *) solver_container[ZONE_0][INST_0][MESH_0][MESH_SOL];
+  }
 
   auto iPoint = geometry_container[ZONE_0][INST_0][MESH_0]->vertex[iMarker][iVertex]->GetNode();
   for (auto iDim = 0 ; iDim < nDim ; iDim++){
-   coord[iDim] = solver_container[ZONE_0][INST_0][MESH_0][MESH_SOL]->GetNodes()->GetMesh_Coord(iPoint,iDim);
+   coord[iDim] = mesh_solver->Get_ValCoord(geometry_container[ZONE_0][INST_0][MESH_0],iPoint,iDim);
   }
 
   coord_passive[0] = SU2_TYPE::GetValue(coord[0]);
