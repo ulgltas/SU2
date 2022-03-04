@@ -3,14 +3,14 @@
 ## \file fsi_computation.py
 #  \brief Python wrapper code for FSI computation by coupling a third-party structural solver to SU2.
 #  \authors Nicola Fonzi, Vittorio Cavalieri based on the work of David Thomas
-#  \version 7.2.0 "Blackbird"
+#  \version 7.3.0 "Blackbird"
 #
 # SU2 Project Website: https://su2code.github.io
 #
 # The SU2 Project is maintained by the SU2 Foundation
 # (http://su2foundation.org)
 #
-# Copyright 2012-2021, SU2 Contributors (cf. AUTHORS.md)
+# Copyright 2012-2022, SU2 Contributors (cf. AUTHORS.md)
 #
 # SU2 is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -86,7 +86,7 @@ def main():
 
   confFile = str(options.filename)
 
-  FSI_config = FSI.FSIConfig(confFile) 		# FSI configuration file
+  FSI_config = FSI.FSIConfig(confFile, comm) 		# FSI configuration file
   CFD_ConFile = FSI_config['CFD_CONFIG_FILE_NAME']	# CFD configuration file
   CSD_ConFile = FSI_config['CSD_CONFIG_FILE_NAME']	# CSD configuration file
 
