@@ -458,6 +458,23 @@ vector<string> CDriver::GetAllDeformMeshMarkersTag() const {
   return interfaceBoundariesTagList;
 }
 
+vector<string> CDriver::GetAllFluidLoadMarkersTag() const {
+
+  vector<string> interfaceBoundariesTagList;
+  unsigned short iMarker, nBoundariesMarker;
+  string Marker_Tag;
+
+  nBoundariesMarker = config_container[ZONE_0]->GetnMarker_Fluid_Load();
+  interfaceBoundariesTagList.resize(nBoundariesMarker);
+
+  for(iMarker=0; iMarker < nBoundariesMarker; iMarker++){
+    Marker_Tag = config_container[ZONE_0]->GetMarker_Fluid_Load_TagBound(iMarker);
+    interfaceBoundariesTagList[iMarker] = Marker_Tag;
+  }
+
+  return interfaceBoundariesTagList;
+}
+
 vector<string> CDriver::GetAllCHTMarkersTag() const {
 
   vector<string> CHTBoundariesTagList;

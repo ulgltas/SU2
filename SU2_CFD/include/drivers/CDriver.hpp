@@ -551,6 +551,12 @@ public:
   vector<string> GetAllBoundaryMarkersTag() const;
 
   /*!
+   * \brief Get all the fluid load markers tags.
+   * \return List of fluid load markers tags.
+   */
+  vector<string> GetAllFluidLoadMarkersTag() const;
+
+  /*!
    * \brief Get all the deformable boundary marker tags.
    * \return List of deformable boundary markers tags.
    */
