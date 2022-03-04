@@ -1007,3 +1007,14 @@ string CDriver::GetSurface_Filename(){
 
   return output_container[ZONE_0]->GetSurface_Filename();
 }
+
+void CHBDriver::UpdateHBOmega(su2double val_omega){
+  config_container[ZONE_0]->SetOmega_HB(0, 0.0);
+  config_container[ZONE_0]->SetHarmonicBalance_Period(2*PI_NUMBER/val_omega);
+  for (unsigned short iOmega = 1; iOmega < (nInstHB+1)/2; iOmega++)
+  {
+    config_container[ZONE_0]->SetOmega_HB(iOmega*2-1, iOmega*val_omega);
+    config_container[ZONE_0]->SetOmega_HB(iOmega*2 , -iOmega*val_omega);
+  }
+  ComputeHB_Operator();
+}

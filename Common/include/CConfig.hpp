@@ -2956,6 +2956,12 @@ public:
   unsigned short GetnTimeInstances(void) const { return nTimeInstances; }
 
   /*!
+   * \brief Set the current period of oscillations to be used with Harmonic Balance.
+   * \param[in] val_period: Current period for Harmonic Balance.
+   */
+  void SetHarmonicBalance_Period(su2double val_period) { HarmonicBalance_Period = val_period; }
+
+  /*!
    * \brief Retrieves the period of oscillations to be used with Harmonic Balance.
    * \return: Period for Harmonic Balance.
    */
@@ -5670,6 +5676,13 @@ public:
    * \param[in] newRotation_Rate_Z - new rotation rate after computing the ramp value.
    */
   void SetRotation_Rate_Z(su2double newRotation_Rate_Z);
+
+  /*!
+   * \brief Set the current Harmonic Balance frequency.
+   * \param[in] iInstance - Number of instance to set the current frequency [0, 2*N]
+   * \param[in] val_omega - New Harmonic Balance Frequency for instance.
+   */
+  void SetOmega_HB(unsigned short iInstance, su2double val_omega) {Omega_HB[iInstance] = val_omega; }
 
   /*!
    * \brief Get the Harmonic Balance frequency pointer.
