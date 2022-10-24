@@ -637,6 +637,14 @@ public:
   vector<passivedouble> GetMeshDisp_Sensitivity(unsigned short iMarker, unsigned long iVertex) const;
 
   /*!
+   * \brief Return the sensitivities of the mesh boundary vertices.
+   * \param[in] iMarker - Marker identifier.
+   * \param[in] iVertex - Vertex identifier.
+   * \return Vector of sensitivities.
+   */
+  vector<passivedouble> GetMeshDisp_Sensitivity(unsigned short iMarker, unsigned long iVertex, unsigned short iInst) const;
+
+  /*!
    * \brief Set the load in X direction for the structural solver.
    * \param[in] iMarker - Marker identifier.
    * \param[in] iVertex - Vertex identifier.
@@ -701,6 +709,18 @@ public:
    */
   void SetFlowLoad_Adjoint(unsigned short iMarker, unsigned long iVertex, passivedouble val_AdjointX,
                                     passivedouble val_AdjointY, passivedouble val_AdjointZ);
+
+  /*!
+   * \brief Set the adjoint of the flow tractions (from the extra step -
+   * the repeated methods should be unified once the postprocessing strategy is in place).
+   * \param[in] iMarker - Marker identifier.
+   * \param[in] iVertex - Vertex identifier.
+   * \param[in] val_AdjointX - Value of the adjoint in the direction X.
+   * \param[in] val_AdjointY - Value of the adjoint in the direction Y.
+   * \param[in] val_AdjointZ - Value of the adjoint in the direction Z.
+   */
+  void SetFlowLoad_Adjoint(unsigned short iMarker, unsigned long iVertex, passivedouble val_AdjointX,
+                                    passivedouble val_AdjointY, passivedouble val_AdjointZ, unsigned short iInst);
 
   /*!
    * \brief Set the adjoint of the structural displacements (from an outside source)

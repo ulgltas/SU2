@@ -161,7 +161,7 @@ void CDiscAdjMeshSolver::SetSensitivity(CGeometry *geometry, CConfig *config, CS
 
   SU2_OMP_PARALLEL {
 
-  const bool time_stepping = (config->GetTime_Marching() != TIME_MARCHING::STEADY);
+  const bool time_stepping = (config->GetTime_Marching() != TIME_MARCHING::STEADY) && (config->GetTime_Marching() != TIME_MARCHING::HARMONIC_BALANCE);
   const auto eps = config->GetAdjSharp_LimiterCoeff()*config->GetRefElemLength();
 
   /*--- Extract the sensitivities ---*/

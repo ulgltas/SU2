@@ -46,9 +46,12 @@ protected:
   unsigned long omp_chunk_size; /*!< \brief Chunk size used in light point loops. */
 
   unsigned short KindDirect_Solver;
+  unsigned short nInstHB;
   CSolver *direct_solver;
   vector<vector<su2double> > CSensitivity; /*!< \brief Shape sensitivity coefficient for each boundary and vertex. */
   vector<su2double> Sens_Geo;    /*!< \brief Total shape sensitivity for each monitored boundary. */
+  //vector<su2double> Total_Sens_Omega;    /*!< \brief Total frequency sensitivity. */
+  su2double Total_Sens_Omega;   /*!< \brief Total sensitivity to base frequency. */
   su2double Total_Sens_Mach;     /*!< \brief Total mach sensitivity coefficient for all the boundaries. */
   su2double Total_Sens_AoA;      /*!< \brief Total angle of attack sensitivity coefficient for all the boundaries. */
   su2double Total_Sens_Geo;      /*!< \brief Total shape sensitivity coefficient for all the boundaries. */
@@ -57,7 +60,7 @@ protected:
   su2double Total_Sens_BPress;   /*!< \brief Total sensitivity to outlet pressure. */
   su2double Total_Sens_Density;  /*!< \brief Total sensitivity to initial density (incompressible). */
   su2double Total_Sens_ModVel;   /*!< \brief Total sensitivity to inlet velocity (incompressible). */
-  su2double Mach, Alpha, Beta, Pressure, Temperature, BPressure, ModVel;
+  su2double Mach, Alpha, Beta, Pressure, Temperature, BPressure, ModVel, OmegaHB;
   su2double TemperatureRad, Total_Sens_Temp_Rad;
 
   CDiscAdjVariable* nodes = nullptr;  /*!< \brief The highest level in the variable hierarchy this solver can safely use. */
@@ -191,6 +194,12 @@ public:
    * \return Value of the velocity magnitude sensitivity.
    */
   inline su2double GetTotal_Sens_ModVel() const override { return Total_Sens_ModVel; }
+
+  /*!
+   * \brief Get the base frequency sensitivity.
+   * \return Value of the base frequency sensitivity.
+   */
+  inline su2double GetTotal_Sens_Omega() const override { return Total_Sens_Omega; }
 
   /*!
    * \brief Get the shape sensitivity coefficient.

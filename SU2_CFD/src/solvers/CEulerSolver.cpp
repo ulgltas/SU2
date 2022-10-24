@@ -2156,7 +2156,6 @@ void CEulerSolver::Source_Residual(CGeometry *geometry, CSolver **solver_contain
     SU2_OMP_FOR_STAT(omp_chunk_size)
     for (iPoint = 0; iPoint < nPointDomain; iPoint++) {
 
-
       /*--- Get stored time spectral source term and add to residual ---*/
       for (iVar = 0; iVar < nVar; iVar++) {
         LinSysRes(iPoint,iVar) += nodes->GetHarmonicBalance_Source(iPoint,iVar);

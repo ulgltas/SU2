@@ -533,13 +533,13 @@ void CMeshSolver::DeformMesh(CGeometry **geometry, CNumerics **numerics, CConfig
   SetMinMaxVolume(geometry[MESH_0], config, true);
 
   /*--- The Grid Velocity is only computed if the problem is time domain ---*/
-  if (time_domain && !config->GetFSI_Simulation())
+  if (time_domain && (!config->GetFSI_Simulation() || config->GetnZone() == 1 ))
     ComputeGridVelocity(geometry, config);
 
   }
   END_SU2_OMP_PARALLEL
 
-  if (time_domain && config->GetFSI_Simulation()) {
+  if (time_domain && config->GetFSI_Simulation() && config->GetnZone() != 1) {
     ComputeGridVelocity_FromBoundary(geometry, numerics, config);
   }
 

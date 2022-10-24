@@ -3674,7 +3674,7 @@ void CConfig::SetPostprocessing(SU2_COMPONENT val_software, unsigned short val_i
 
   /*--- Check for unsupported features. ---*/
 
-  if ((Kind_Solver != MAIN_SOLVER::EULER && Kind_Solver != MAIN_SOLVER::NAVIER_STOKES && Kind_Solver != MAIN_SOLVER::RANS) && (TimeMarching == TIME_MARCHING::HARMONIC_BALANCE)){
+  if ((Kind_Solver != MAIN_SOLVER::EULER && Kind_Solver != MAIN_SOLVER::NAVIER_STOKES && Kind_Solver != MAIN_SOLVER::RANS && Kind_Solver != MAIN_SOLVER::DISC_ADJ_EULER && Kind_Solver != MAIN_SOLVER::DISC_ADJ_NAVIER_STOKES && Kind_Solver != MAIN_SOLVER::DISC_ADJ_RANS) && (TimeMarching == TIME_MARCHING::HARMONIC_BALANCE)){
     SU2_MPI::Error("Harmonic Balance not yet implemented for the incompressible solver.", CURRENT_FUNCTION);
   }
 

@@ -3082,6 +3082,12 @@ public:
 
   /*!
    * \brief A virtual member.
+   * \return Value of the base frequency sensitivity.
+   */
+  inline virtual su2double GetTotal_Sens_Omega() const { return 0; }
+
+  /*!
+   * \brief A virtual member.
    * \return Value of the density at the infinity.
    */
   inline virtual su2double GetDensity_Inf(void) const { return 0; }

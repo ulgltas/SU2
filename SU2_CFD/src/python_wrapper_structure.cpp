@@ -28,6 +28,7 @@
 
 #include "../include/drivers/CDriver.hpp"
 #include "../include/drivers/CSinglezoneDriver.hpp"
+#include "../include/drivers/CDiscAdjHarmonicDriver.hpp"
 #include "../include/solvers/CMeshSolver.hpp"
 #include "../include/iteration/CIteration.hpp"
 #include "../include/output/COutput.hpp"
@@ -604,28 +605,30 @@ void CDriver::SetInlet_Angle(unsigned short iMarker, passivedouble alpha){
 void CDriver::ResetConvergence() {
 
   for(iZone = 0; iZone < nZone; iZone++) {
-    switch (config_container[iZone]->GetKind_Solver()) {
+    for(auto jInst = 0; jInst < nInst[iZone]; jInst++) {
+      switch (config_container[iZone]->GetKind_Solver()) {
 
-    case MAIN_SOLVER::EULER: case MAIN_SOLVER::NAVIER_STOKES: case MAIN_SOLVER::RANS:
-    case MAIN_SOLVER::INC_EULER: case MAIN_SOLVER::INC_NAVIER_STOKES: case MAIN_SOLVER::INC_RANS:
-      integration_container[iZone][INST_0][FLOW_SOL]->SetConvergence(false);
-      if (config_container[iZone]->GetKind_Solver() == MAIN_SOLVER::RANS) integration_container[iZone][INST_0][TURB_SOL]->SetConvergence(false);
-      if(config_container[iZone]->GetKind_Trans_Model() == TURB_TRANS_MODEL::LM) integration_container[iZone][INST_0][TRANS_SOL]->SetConvergence(false);
-      break;
+      case MAIN_SOLVER::EULER: case MAIN_SOLVER::NAVIER_STOKES: case MAIN_SOLVER::RANS:
+      case MAIN_SOLVER::INC_EULER: case MAIN_SOLVER::INC_NAVIER_STOKES: case MAIN_SOLVER::INC_RANS:
+        integration_container[iZone][jInst][FLOW_SOL]->SetConvergence(false);
+        if (config_container[iZone]->GetKind_Solver() == MAIN_SOLVER::RANS) integration_container[iZone][jInst][TURB_SOL]->SetConvergence(false);
+        if(config_container[iZone]->GetKind_Trans_Model() == TURB_TRANS_MODEL::LM) integration_container[iZone][jInst][TRANS_SOL]->SetConvergence(false);
+        break;
 
-    case MAIN_SOLVER::FEM_ELASTICITY:
-      integration_container[iZone][INST_0][FEA_SOL]->SetConvergence(false);
-      break;
+      case MAIN_SOLVER::FEM_ELASTICITY:
+        integration_container[iZone][jInst][FEA_SOL]->SetConvergence(false);
+        break;
 
-    case MAIN_SOLVER::ADJ_EULER: case MAIN_SOLVER::ADJ_NAVIER_STOKES: case MAIN_SOLVER::ADJ_RANS: case MAIN_SOLVER::DISC_ADJ_EULER: case MAIN_SOLVER::DISC_ADJ_NAVIER_STOKES: case MAIN_SOLVER::DISC_ADJ_RANS:
-    case MAIN_SOLVER::DISC_ADJ_INC_EULER: case MAIN_SOLVER::DISC_ADJ_INC_NAVIER_STOKES: case MAIN_SOLVER::DISC_ADJ_INC_RANS:
-      integration_container[iZone][INST_0][ADJFLOW_SOL]->SetConvergence(false);
-      if( (config_container[iZone]->GetKind_Solver() == MAIN_SOLVER::ADJ_RANS) || (config_container[iZone]->GetKind_Solver() == MAIN_SOLVER::DISC_ADJ_RANS) )
-        integration_container[iZone][INST_0][ADJTURB_SOL]->SetConvergence(false);
-      break;
+      case MAIN_SOLVER::ADJ_EULER: case MAIN_SOLVER::ADJ_NAVIER_STOKES: case MAIN_SOLVER::ADJ_RANS: case MAIN_SOLVER::DISC_ADJ_EULER: case MAIN_SOLVER::DISC_ADJ_NAVIER_STOKES: case MAIN_SOLVER::DISC_ADJ_RANS:
+      case MAIN_SOLVER::DISC_ADJ_INC_EULER: case MAIN_SOLVER::DISC_ADJ_INC_NAVIER_STOKES: case MAIN_SOLVER::DISC_ADJ_INC_RANS:
+        integration_container[iZone][jInst][ADJFLOW_SOL]->SetConvergence(false);
+        if( (config_container[iZone]->GetKind_Solver() == MAIN_SOLVER::ADJ_RANS) || (config_container[iZone]->GetKind_Solver() == MAIN_SOLVER::DISC_ADJ_RANS) )
+          integration_container[iZone][jInst][ADJTURB_SOL]->SetConvergence(false);
+        break;
 
-    default:
-      break;
+      default:
+        break;
+      }
     }
   }
 
@@ -797,6 +800,36 @@ vector<passivedouble> CDriver::GetMeshDisp_Sensitivity(unsigned short iMarker, u
 
 }
 
+vector<passivedouble> CDriver::GetMeshDisp_Sensitivity(unsigned short iMarker, unsigned long iVertex, unsigned short iInst) const {
+
+  unsigned long iPoint;
+  vector<su2double> Disp_Sens(3, 0.0);
+  vector<passivedouble> Disp_Sens_passive(3, 0.0);
+
+  iPoint = geometry_container[ZONE_0][iInst][MESH_0]->vertex[iMarker][iVertex]->GetNode();
+  CSolver *solver =  solver_container[ZONE_0][iInst][MESH_0][ADJMESH_SOL];
+  CGeometry *geometry = geometry_container[ZONE_0][iInst][MESH_0];
+
+  Disp_Sens[0] = solver->GetNodes()->GetBoundDisp_Sens(iPoint, 0);
+  Disp_Sens[1] = solver->GetNodes()->GetBoundDisp_Sens(iPoint, 1);
+  if (geometry->GetnDim() == 3)
+    Disp_Sens[2] = solver->GetNodes()->GetBoundDisp_Sens(iPoint, 2);
+  else
+    Disp_Sens[2] = 0.0;
+
+  Disp_Sens_passive[0] = SU2_TYPE::GetValue(Disp_Sens[0]);
+  Disp_Sens_passive[1] = SU2_TYPE::GetValue(Disp_Sens[1]);
+  Disp_Sens_passive[2] = SU2_TYPE::GetValue(Disp_Sens[2]);
+
+  return Disp_Sens_passive;
+
+}
+
+passivedouble CDiscAdjHarmonicDriver::GetFrequency_Sensitivity(unsigned short iInst) const {
+
+  return SU2_TYPE::GetValue(solver_container[ZONE_0][iInst][MESH_0][ADJFLOW_SOL]->GetTotal_Sens_Omega());
+}
+
 vector<passivedouble> CDriver::GetFlowLoad_Sensitivity(unsigned short iMarker, unsigned long iVertex) const {
 
   unsigned long iPoint;
@@ -827,6 +860,19 @@ void CDriver::SetFlowLoad_Adjoint(unsigned short iMarker, unsigned long iVertex,
 
   CSolver *solver = solver_container[ZONE_0][INST_0][MESH_0][FLOW_SOL];
   CGeometry *geometry = geometry_container[ZONE_0][INST_0][MESH_0];
+
+  solver->StoreVertexTractionsAdjoint(iMarker, iVertex, 0, val_AdjointX);
+  solver->StoreVertexTractionsAdjoint(iMarker, iVertex, 1, val_AdjointY);
+  if (geometry->GetnDim() == 3)
+    solver->StoreVertexTractionsAdjoint(iMarker, iVertex, 2, val_AdjointZ);
+
+}
+
+void CDriver::SetFlowLoad_Adjoint(unsigned short iMarker, unsigned long iVertex, passivedouble val_AdjointX,
+                                  passivedouble val_AdjointY, passivedouble val_AdjointZ, unsigned short iInst) {
+
+  CSolver *solver = solver_container[ZONE_0][iInst][MESH_0][FLOW_SOL];
+  CGeometry *geometry = geometry_container[ZONE_0][iInst][MESH_0];
 
   solver->StoreVertexTractionsAdjoint(iMarker, iVertex, 0, val_AdjointX);
   solver->StoreVertexTractionsAdjoint(iMarker, iVertex, 1, val_AdjointY);
@@ -942,7 +988,7 @@ void CHBDriver::StaticMeshUpdate() {
                                                             config_container[ZONE_0],
                                                             RECORDING::MESH_DEFORM);
     }
-    
+
     for(iInst = 0; iInst < nInstHB; iInst++) {
       
       for (unsigned long jPoint = 0; jPoint < geometry_container[iZone][INST_0][MESH_0]->GetnPoint(); jPoint++) {
@@ -1011,6 +1057,18 @@ string CDriver::GetSurface_Filename(){
 }
 
 void CHBDriver::UpdateHBOmega(su2double val_omega){
+  config_container[ZONE_0]->SetOmega_HB(0, 0.0);
+  config_container[ZONE_0]->SetHarmonicBalance_Period(2*PI_NUMBER/val_omega);
+  for (unsigned short iOmega = 1; iOmega < (nInstHB+1)/2; iOmega++)
+  {
+    config_container[ZONE_0]->SetOmega_HB(iOmega*2-1, iOmega*val_omega);
+    config_container[ZONE_0]->SetOmega_HB(iOmega*2 , -iOmega*val_omega);
+  }
+  ComputeHB_Operator();
+}
+
+void CDiscAdjHarmonicDriver::UpdateHBOmega(su2double val_omega){
+  AD::RegisterInput(val_omega);
   config_container[ZONE_0]->SetOmega_HB(0, 0.0);
   config_container[ZONE_0]->SetHarmonicBalance_Period(2*PI_NUMBER/val_omega);
   for (unsigned short iOmega = 1; iOmega < (nInstHB+1)/2; iOmega++)

@@ -47,7 +47,7 @@ void CDiscAdjFluidIteration::Preprocess(COutput* output, CIntegration**** integr
 
   /*--- For the unsteady adjoint, load direct solutions from restart files. ---*/
 
-  if (config[iZone]->GetTime_Marching() != TIME_MARCHING::STEADY) {
+  if (config[iZone]->GetTime_Marching() != TIME_MARCHING::STEADY && config[iZone]->GetTime_Marching() != TIME_MARCHING::HARMONIC_BALANCE) {
     const int Direct_Iter = static_cast<int>(config[iZone]->GetUnst_AdjointIter()) - static_cast<int>(TimeIter) - 2 + dual_time;
 
     /*--- For dual-time stepping we want to load the already converged solution at timestep n ---*/
@@ -633,7 +633,7 @@ bool CDiscAdjFluidIteration::Monitor(COutput* output, CIntegration**** integrati
 
   /*--- Write the convergence history for the fluid (only screen output) ---*/
 
-  output->SetHistory_Output(geometry[iZone][INST_0][MESH_0], solver[iZone][INST_0][MESH_0], config[iZone],
+  output->SetHistory_Output(geometry[iZone][iInst][MESH_0], solver[iZone][iInst][MESH_0], config[iZone],
                             config[iZone]->GetTimeIter(), config[iZone]->GetOuterIter(),
                             config[iZone]->GetInnerIter());
 

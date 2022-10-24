@@ -288,6 +288,20 @@ void CDiscAdjSolver::RegisterVariables(CGeometry *geometry, CConfig *config, boo
    * and thereby also the objective function. The adjoint values (i.e. the derivatives) can be
    * extracted in the ExtractAdjointVariables routine. ---*/
 
+  if (config->GetTime_Marching() == TIME_MARCHING::HARMONIC_BALANCE)
+  {
+    nInstHB = config->GetnTimeInstances();
+    OmegaHB = config->GetOmega_HB()[1]; // Base frequency
+    AD::RegisterInput(OmegaHB);
+    config->SetHarmonicBalance_Period(2*M_PI/OmegaHB);
+    for (unsigned short iOmega = 1; iOmega < (nInstHB+1)/2; iOmega++)
+    {
+      config->SetOmega_HB(iOmega*2-1, iOmega*OmegaHB);
+      config->SetOmega_HB(iOmega*2 , -iOmega*OmegaHB);
+    }
+  }
+  
+
   }
   END_SU2_OMP_MASTER
   SU2_OMP_BARRIER
@@ -433,7 +447,13 @@ void CDiscAdjSolver::ExtractAdjoint_Variables(CGeometry *geometry, CConfig *conf
   }
 
   /*--- Extract here the adjoint values of everything else that is registered as input in RegisterInput. ---*/
-
+  if (config->GetTime_Marching() == TIME_MARCHING::HARMONIC_BALANCE)
+  {
+    su2double Local_Sens_Omega;
+    Local_Sens_Omega = SU2_TYPE::GetDerivative(OmegaHB);
+    SU2_MPI::Allreduce(&Local_Sens_Omega, &Total_Sens_Omega, 1, MPI_DOUBLE, MPI_SUM, SU2_MPI::GetComm());
+  }
+  
   }
   END_SU2_OMP_MASTER
   SU2_OMP_BARRIER
@@ -474,7 +494,7 @@ void CDiscAdjSolver::SetSensitivity(CGeometry *geometry, CConfig *config, CSolve
 
   SU2_OMP_PARALLEL {
 
-  const bool time_stepping = (config->GetTime_Marching() != TIME_MARCHING::STEADY);
+  const bool time_stepping = (config->GetTime_Marching() != TIME_MARCHING::STEADY) && (config->GetTime_Marching() != TIME_MARCHING::HARMONIC_BALANCE);
   const su2double eps = config->GetAdjSharp_LimiterCoeff()*config->GetRefElemLength();
 
   SU2_OMP_FOR_STAT(omp_chunk_size)
