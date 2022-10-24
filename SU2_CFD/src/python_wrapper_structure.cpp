@@ -220,7 +220,7 @@ vector<passivedouble> CDriver::GetInitialMeshCoord(unsigned short iMarker, unsig
   vector<passivedouble> coord_passive(3, 0.0);
   CFEASolver *mesh_solver;
 
-  if (config_container[ZONE_0]->GetKind_Solver() == FEM_ELASTICITY || config_container[ZONE_0]->GetKind_Solver() == DISC_ADJ_FEM){
+  if (config_container[ZONE_0]->GetKind_Solver() == MAIN_SOLVER::FEM_ELASTICITY || config_container[ZONE_0]->GetKind_Solver() == MAIN_SOLVER::DISC_ADJ_FEM){
      mesh_solver = (CFEASolver *) solver_container[ZONE_0][INST_0][MESH_0][FEA_SOL];
   }
   else {
@@ -677,7 +677,7 @@ void CDriver::BoundaryConditionsUpdate(){
 ////////////////////////////////////////////////////////////////////////////////
 
 void CDriver::SetFEA_Loads(unsigned short iMarker, unsigned long iVertex, passivedouble LoadX,
-                       passivedouble LoadY, passivedouble LoadZ) {
+                       passivedouble LoadY, passivedouble LoadZ, unsigned short iInst) {
 
   unsigned long iPoint;
   su2double NodalForce[3] = {0.0,0.0,0.0};
@@ -685,8 +685,8 @@ void CDriver::SetFEA_Loads(unsigned short iMarker, unsigned long iVertex, passiv
   NodalForce[1] = LoadY;
   NodalForce[2] = LoadZ;
 
-  iPoint = geometry_container[ZONE_0][INST_0][MESH_0]->vertex[iMarker][iVertex]->GetNode();
-  solver_container[ZONE_0][INST_0][MESH_0][FEA_SOL]->GetNodes()->Set_FlowTraction(iPoint,NodalForce);
+  iPoint = geometry_container[ZONE_0][iInst][MESH_0]->vertex[iMarker][iVertex]->GetNode();
+  solver_container[ZONE_0][iInst][MESH_0][FEA_SOL]->GetNodes()->Set_FlowTraction(iPoint,NodalForce);
 
 }
 
@@ -901,7 +901,7 @@ void CSinglezoneDriver::StaticMeshUpdate() {
                                                             solver_container[ZONE_0][INST_0][MESH_0],
                                                             numerics_container[ZONE_0][INST_0][MESH_0],
                                                             config_container[ZONE_0],
-                                                            RECORDING::CLEAR_INDICES);
+                                                            RECORDING::MESH_DEFORM);
 
   if(rank == MASTER_NODE) cout << "Static grid deformation: grid velocity set to 0" << endl;
   /*--- Start the solution so that U_0=0 iff it is in the time domain ---*/
@@ -930,7 +930,6 @@ void CHBDriver::StaticMeshUpdate() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 #endif
 
-  su2double GridVel;
   CMeshSolver *mesh_solver;
   for(iZone = 0; iZone < nZone; iZone++) {
     if(rank == MASTER_NODE) cout << " Deforming the volume grid." << endl;
@@ -941,17 +940,17 @@ void CHBDriver::StaticMeshUpdate() {
                                                             solver_container[ZONE_0][iInst][MESH_0],
                                                             numerics_container[ZONE_0][iInst][MESH_0],
                                                             config_container[ZONE_0],
-                                                            RECORDING::CLEAR_INDICES);
+                                                            RECORDING::MESH_DEFORM);
     }
     
     for(iInst = 0; iInst < nInstHB; iInst++) {
       
       for (unsigned long jPoint = 0; jPoint < geometry_container[iZone][INST_0][MESH_0]->GetnPoint(); jPoint++) {
         for (unsigned short iDim = 0; iDim < nDim; iDim++) {
-          GridVel = 0.0;
+          su2double GridVel = 0.0;
           for (unsigned int kInst = 0; kInst < nInstHB; kInst++) {
-            const su2double* Disp = geometry_container[iZone][kInst][MESH_0]->nodes->GetCoord(jPoint);
-            GridVel += Disp[iDim]*D[iInst][kInst];
+            const su2double Disp = geometry_container[iZone][kInst][MESH_0]->nodes->GetCoord(jPoint, iDim);
+            GridVel += D[iInst][kInst]*Disp;
           }
           geometry_container[iZone][iInst][MESH_0]->nodes->SetGridVel(jPoint, iDim, GridVel);
         }

@@ -193,7 +193,7 @@ CDriver::CDriver(char* confFile, unsigned short val_nZone, SU2_Comm MPICommunica
        term of the PDE, i.e. loops over the edges to compute convective and viscous
        fluxes, loops over the nodes to compute source terms, and routines for
        imposing various boundary condition type for the PDE. ---*/
-
+      config_container[iZone]->SetiInst(iInst);
       Solver_Preprocessing(config_container[iZone], geometry_container[iZone][iInst], solver_container[iZone][iInst]);
 
       /*--- Definition of the numerical method class:
@@ -252,6 +252,7 @@ CDriver::CDriver(char* confFile, unsigned short val_nZone, SU2_Comm MPICommunica
   if (fsi) {
     for (iZone = 0; iZone < nZone; iZone++) {
       for (iInst = 0; iInst < nInst[iZone]; iInst++){
+        config_container[iZone]->SetiInst(iInst);
         Solver_Restart(solver_container[iZone][iInst], geometry_container[iZone][iInst],
                        config_container[iZone], true);
       }
@@ -1134,8 +1135,10 @@ void CDriver::Solver_Restart(CSolver ***solver, CGeometry **geometry,
   const bool dt_step_2nd = (config->GetTime_Marching() == TIME_MARCHING::DT_STEPPING_2ND) &&
                            !config->GetStructuralProblem() && !config->GetFEMSolver() &&
                            !adjoint && time_domain;
+  const bool harmonic_balance = config->GetTime_Marching() == TIME_MARCHING::HARMONIC_BALANCE;
+  if (harmonic_balance) val_iter += config->GetiInst();
 
-  if (time_domain) {
+  if (time_domain && !harmonic_balance) {
     if (adjoint) val_iter = config->GetUnst_AdjointIter() - 1;
     else val_iter = config->GetRestart_Iter() - 1 - dt_step_2nd;
   }
@@ -3124,7 +3127,8 @@ bool CFluidDriver::Monitor(unsigned long ExtIter) {
   switch (config_container[ZONE_0]->GetKind_Solver()) {
     case MAIN_SOLVER::EULER: case MAIN_SOLVER::NAVIER_STOKES: case MAIN_SOLVER::RANS:
     case MAIN_SOLVER::NEMO_EULER: case MAIN_SOLVER::NEMO_NAVIER_STOKES:
-      StopCalc = integration_container[ZONE_0][INST_0][FLOW_SOL]->GetConvergence(); break;
+      output_container[ZONE_0]->Convergence_Monitoring(config_container[ZONE_0], ExtIter);
+      StopCalc = output_container[ZONE_0]->GetConvergence(); break;
     case MAIN_SOLVER::HEAT_EQUATION:
       StopCalc = integration_container[ZONE_0][INST_0][HEAT_SOL]->GetConvergence(); break;
     case MAIN_SOLVER::FEM_ELASTICITY:
@@ -3474,6 +3478,11 @@ void CHBDriver::Run() {
         solver_container, numerics_container, config_container,
         surface_movement, grid_movement, FFDBox, ZONE_0, iInst);
 
+  for (iInst = 0; iInst < nInstHB; iInst++)
+    iteration_container[ZONE_0][iInst]->Monitor(output_container[ZONE_0], integration_container, geometry_container,
+        solver_container, numerics_container, config_container,
+        surface_movement, grid_movement, FFDBox, ZONE_0, iInst);
+
   /*--- Update the convergence history file (serial and parallel computations). ---*/
 
   for (iZone = 0; iZone < nZone; iZone++) {
@@ -3542,13 +3551,12 @@ void CHBDriver::SetHarmonicBalance(unsigned short iInst) {
   unsigned short iVar, jInst, iMGlevel;
   unsigned short nVar = solver_container[ZONE_0][INST_0][MESH_0][FLOW_SOL]->GetnVar();
   unsigned long iPoint;
-  bool implicit = (config_container[ZONE_0]->GetKind_TimeIntScheme_Flow() == EULER_IMPLICIT);
+  unsigned long InnerIter = config_container[ZONE_0]->GetInnerIter();
+  bool implicit = (config_container[ZONE_0]->GetKind_TimeIntScheme_Flow() == EULER_IMPLICIT) && !(config_container[ZONE_0]->GetRestart() && InnerIter == 0);
   bool adjoint = (config_container[ZONE_0]->GetContinuous_Adjoint());
   if (adjoint) {
     implicit = (config_container[ZONE_0]->GetKind_TimeIntScheme_AdjFlow() == EULER_IMPLICIT);
   }
-
-  unsigned long InnerIter = config_container[ZONE_0]->GetInnerIter();
 
   /*--- Retrieve values from the config file ---*/
   su2double *U = new su2double[nVar];
@@ -3587,19 +3595,16 @@ void CHBDriver::SetHarmonicBalance(unsigned short iInst) {
           if (!adjoint) {
             U[iVar] = solver_container[ZONE_0][jInst][iMGlevel][FLOW_SOL]->GetNodes()->GetSolution(iPoint, iVar);
             Source[iVar] += U[iVar]*D[iInst][jInst]*Volume;
-
             if (implicit) {
               U_old[iVar] = solver_container[ZONE_0][jInst][iMGlevel][FLOW_SOL]->GetNodes()->GetSolution_Old(iPoint, iVar);
               deltaU = U[iVar] - U_old[iVar];
               Source[iVar] += deltaU*D[iInst][jInst]*Volume;
             }
-
           }
 
           else {
             Psi[iVar] = solver_container[ZONE_0][jInst][iMGlevel][ADJFLOW_SOL]->GetNodes()->GetSolution(iPoint, iVar);
             Source[iVar] += Psi[iVar]*D[jInst][iInst]*Volume;
-
             if (implicit) {
               Psi_old[iVar] = solver_container[ZONE_0][jInst][iMGlevel][ADJFLOW_SOL]->GetNodes()->GetSolution_Old(iPoint, iVar);
               deltaPsi = Psi[iVar] - Psi_old[iVar];
@@ -3628,6 +3633,7 @@ void CHBDriver::SetHarmonicBalance(unsigned short iInst) {
     /*--- Extra variables needed if we have a turbulence model. ---*/
     unsigned short nVar_Turb = solver_container[ZONE_0][INST_0][MESH_0][TURB_SOL]->GetnVar();
     su2double *U_Turb = new su2double[nVar_Turb];
+    su2double *U_Turb_old = new su2double[nVar_Turb];
     su2double *Source_Turb = new su2double[nVar_Turb];
 
     /*--- Loop over only the finest mesh level (turbulence is always solved
@@ -3640,6 +3646,12 @@ void CHBDriver::SetHarmonicBalance(unsigned short iInst) {
         for (iVar = 0; iVar < nVar_Turb; iVar++) {
           U_Turb[iVar] = solver_container[ZONE_0][jInst][MESH_0][TURB_SOL]->GetNodes()->GetSolution(iPoint, iVar);
           Source_Turb[iVar] += U_Turb[iVar]*D[iInst][jInst]*Volume;
+          if (implicit) {
+            U_Turb_old[iVar] = 0.;
+            U_Turb_old[iVar] = solver_container[ZONE_0][jInst][MESH_0][TURB_SOL]->GetNodes()->GetSolution_Old(iPoint, iVar);
+            deltaU = U_Turb[iVar] - U_Turb_old[iVar];
+            Source_Turb[iVar] += deltaU*D[iInst][jInst]*Volume;
+          }
         }
       }
 
@@ -3793,7 +3805,7 @@ void CHBDriver::StabilizeHarmonicBalance() {
         for (iInst = 0; iInst < nInstHB; iInst++) {
           for (jInst = 0; jInst < nInstHB; jInst++) {
             su2double Volume = geometry_container[ZONE_0][jInst][iMGlevel]->nodes->GetVolume(iPoint);
-            Source[iInst] += P[iInst][jInst]*Source_old[jInst]*Volume;
+            Source[iInst] += P[iInst][jInst]*Source_old[jInst];
           }
 
           /*--- Store updated source terms for current node ---*/

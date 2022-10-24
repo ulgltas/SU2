@@ -1293,7 +1293,8 @@ void CAdjEulerSolver::Source_Residual(CGeometry *geometry, CSolver **solver_cont
       /*--- Get stored harmonic balance source term ---*/
       for (iVar = 0; iVar < nVar; iVar++) {
         Source = nodes->GetHarmonicBalance_Source(iPoint,iVar);
-        Residual[iVar] = Source*Volume;
+        //Residual[iVar] = Source*Volume;
+        Residual[iVar] = Source;
       }
 
       /*--- Add Residual ---*/

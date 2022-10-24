@@ -645,7 +645,7 @@ public:
    * \param[in] LoadX - Value of the load in the direction Z.
    */
   void SetFEA_Loads(unsigned short iMarker, unsigned long iVertex, passivedouble LoadX,
-                    passivedouble LoadY, passivedouble LoadZ);
+                    passivedouble LoadY, passivedouble LoadZ, unsigned short iInst = INST_0);
 
   /*!
    * \brief Return the displacements from the FEA solver.
@@ -1000,4 +1000,9 @@ public:
    * \brief Return number of time instances.
    */
   unsigned short GetHB_Instances() {return nInstHB;};
+
+  /*!
+   * \brief Update frequency of HB calculation.
+   */
+  virtual void UpdateHBOmega(su2double val_omega);
 };

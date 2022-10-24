@@ -5688,7 +5688,7 @@ public:
    * \brief Get information about dynamic grids.
    * \return <code>TRUE</code> if there is a grid movement; otherwise <code>FALSE</code>.
    */
-  bool GetDynamic_Grid(void) const { return GetGrid_Movement() || (Deform_Mesh && Time_Domain); }
+  bool GetDynamic_Grid(void) const { return GetGrid_Movement() || (Deform_Mesh && Time_Domain) || (Deform_Mesh && (GetTime_Marching() == TIME_MARCHING::HARMONIC_BALANCE)); }
 
   /*!
    * \brief Get information about the volumetric movement.

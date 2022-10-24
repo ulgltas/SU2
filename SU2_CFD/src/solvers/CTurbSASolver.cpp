@@ -372,13 +372,11 @@ void CTurbSASolver::Source_Residual(CGeometry *geometry, CSolver **solver_contai
     SU2_OMP_FOR_STAT(omp_chunk_size)
     for (unsigned long iPoint = 0; iPoint < nPointDomain; iPoint++) {
 
-      su2double Volume = geometry->nodes->GetVolume(iPoint);
-
       /*--- Access stored harmonic balance source term ---*/
 
       for (unsigned short iVar = 0; iVar < nVar; iVar++) {
         su2double Source = nodes->GetHarmonicBalance_Source(iPoint,iVar);
-        LinSysRes(iPoint,iVar) += Source*Volume;
+        LinSysRes(iPoint,iVar) += Source;
       }
     }
     END_SU2_OMP_FOR
