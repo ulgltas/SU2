@@ -2,7 +2,7 @@
  * \file CDiscAdjSolver.cpp
  * \brief Main subroutines for solving the discrete adjoint problem.
  * \author T. Albring
- * \version 7.3.0 "Blackbird"
+ * \version 7.4.0 "Blackbird"
  *
  * SU2 Project Website: https://su2code.github.io
  *
@@ -29,19 +29,18 @@
 #include "../../../Common/include/toolboxes/geometry_toolbox.hpp"
 #include "../../../Common/include/parallelization/omp_structure.hpp"
 
-CDiscAdjSolver::CDiscAdjSolver(CGeometry *geometry, CConfig *config, CSolver *direct_solver,
+CDiscAdjSolver::CDiscAdjSolver(CGeometry *geometry, CConfig *config, CSolver *direct_sol,
                                unsigned short Kind_Solver, unsigned short iMesh)  : CSolver() {
+
+  /*-- Store some information about direct solver ---*/
+
+  KindDirect_Solver = Kind_Solver;
+  direct_solver = direct_sol;
 
   adjoint = true;
 
   nVar = direct_solver->GetnVar();
   nDim = geometry->GetnDim();
-
-  /*--- Initialize arrays to NULL ---*/
-
-  /*-- Store some information about direct solver ---*/
-  this->KindDirect_Solver = Kind_Solver;
-  this->direct_solver = direct_solver;
 
   nMarker      = config->GetnMarker_All();
   nPoint       = geometry->GetnPoint();
@@ -85,6 +84,11 @@ CDiscAdjSolver::CDiscAdjSolver(CGeometry *geometry, CConfig *config, CSolver *di
   vector<su2double> Solution(nVar,1e-16);
   nodes = new CDiscAdjVariable(Solution.data(), nPoint, nDim, nVar, config);
   SetBaseClassPointerToNodes();
+
+  /*--- Allocate extra solution variables, if any are in use. ---*/
+
+  const auto nVarExtra = direct_solver->RegisterSolutionExtra(true, config);
+  nodes->AllocateAdjointSolutionExtra(nVarExtra);
 
   switch(KindDirect_Solver){
   case RUNTIME_FLOW_SYS:
@@ -163,6 +167,8 @@ void CDiscAdjSolver::RegisterSolution(CGeometry *geometry, CConfig *config) {
   /*--- Boolean true indicates that an input is registered ---*/
   direct_solver->GetNodes()->RegisterSolution(true);
 
+  direct_solver->RegisterSolutionExtra(true, config);
+
   if (time_n_needed)
     direct_solver->GetNodes()->RegisterSolution_time_n();
 
@@ -172,7 +178,7 @@ void CDiscAdjSolver::RegisterSolution(CGeometry *geometry, CConfig *config) {
 
 void CDiscAdjSolver::RegisterVariables(CGeometry *geometry, CConfig *config, bool reset) {
 
-  SU2_OMP_MASTER {
+  BEGIN_SU2_OMP_SAFE_GLOBAL_ACCESS {
 
   /*--- Register farfield values as input ---*/
 
@@ -303,8 +309,7 @@ void CDiscAdjSolver::RegisterVariables(CGeometry *geometry, CConfig *config, boo
   
 
   }
-  END_SU2_OMP_MASTER
-  SU2_OMP_BARRIER
+  END_SU2_OMP_SAFE_GLOBAL_ACCESS
 }
 
 void CDiscAdjSolver::RegisterOutput(CGeometry *geometry, CConfig *config) {
@@ -312,6 +317,8 @@ void CDiscAdjSolver::RegisterOutput(CGeometry *geometry, CConfig *config) {
   /*--- Register variables as output of the solver iteration. Boolean false indicates that an output is registered ---*/
 
   direct_solver->GetNodes()->RegisterSolution(false);
+
+  direct_solver->RegisterSolutionExtra(false, config);
 }
 
 void CDiscAdjSolver::ExtractAdjoint_Solution(CGeometry *geometry, CConfig *config, bool CrossTerm) {
@@ -351,6 +358,8 @@ void CDiscAdjSolver::ExtractAdjoint_Solution(CGeometry *geometry, CConfig *confi
   }
   END_SU2_OMP_FOR
 
+  direct_solver->ExtractAdjoint_SolutionExtra(nodes->GetSolutionExtra(), config);
+
   /*--- Residuals and time_n terms are not needed when evaluating multizone cross terms. ---*/
   if (CrossTerm) return;
 
@@ -389,7 +398,7 @@ void CDiscAdjSolver::ExtractAdjoint_Solution(CGeometry *geometry, CConfig *confi
 
 void CDiscAdjSolver::ExtractAdjoint_Variables(CGeometry *geometry, CConfig *config) {
 
-  SU2_OMP_MASTER {
+  BEGIN_SU2_OMP_SAFE_GLOBAL_ACCESS {
 
   /*--- Extract the adjoint values of the farfield values ---*/
 
@@ -455,8 +464,7 @@ void CDiscAdjSolver::ExtractAdjoint_Variables(CGeometry *geometry, CConfig *conf
   }
   
   }
-  END_SU2_OMP_MASTER
-  SU2_OMP_BARRIER
+  END_SU2_OMP_SAFE_GLOBAL_ACCESS
 }
 
 void CDiscAdjSolver::SetAdjoint_Output(CGeometry *geometry, CConfig *config) {
@@ -488,6 +496,8 @@ void CDiscAdjSolver::SetAdjoint_Output(CGeometry *geometry, CConfig *config) {
     direct_solver->GetNodes()->SetAdjointSolution(iPoint,Solution);
   }
   END_SU2_OMP_FOR
+
+  direct_solver->SetAdjoint_SolutionExtra(nodes->GetSolutionExtra(), config);
 }
 
 void CDiscAdjSolver::SetSensitivity(CGeometry *geometry, CConfig *config, CSolver*) {
@@ -574,8 +584,8 @@ void CDiscAdjSolver::SetSurface_Sensitivity(CGeometry *geometry, CConfig *config
     }
   }
 
-  SU2_OMP_BARRIER
-  SU2_OMP_MASTER {
+  BEGIN_SU2_OMP_SAFE_GLOBAL_ACCESS
+  {
     auto local = Sens_Geo;
     SU2_MPI::Allreduce(local.data(), Sens_Geo.data(), Sens_Geo.size(), MPI_DOUBLE, MPI_SUM, SU2_MPI::GetComm());
 
@@ -585,14 +595,14 @@ void CDiscAdjSolver::SetSurface_Sensitivity(CGeometry *geometry, CConfig *config
       Total_Sens_Geo += x;
     }
   }
-  END_SU2_OMP_MASTER
-  SU2_OMP_BARRIER
-
+  END_SU2_OMP_SAFE_GLOBAL_ACCESS
 }
 
 void CDiscAdjSolver::Preprocessing(CGeometry *geometry, CSolver **solver_container, CConfig *config, unsigned short iMesh,
                                    unsigned short iRKStep, unsigned short RunTime_EqSystem, bool Output) {
+  SU2_OMP_MASTER
   config->SetGlobalParam(config->GetKind_Solver(), RunTime_EqSystem);
+  END_SU2_OMP_MASTER
 
   const bool dual_time = (config->GetTime_Marching() == TIME_MARCHING::DT_STEPPING_1ST) ||
                          (config->GetTime_Marching() == TIME_MARCHING::DT_STEPPING_2ND);

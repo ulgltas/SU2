@@ -2,7 +2,7 @@
  * \file CIncNSSolver.cpp
  * \brief Main subroutines for solving Navier-Stokes incompressible flow.
  * \author F. Palacios, T. Economon
- * \version 7.3.0 "Blackbird"
+ * \version 7.4.0 "Blackbird"
  *
  * SU2 Project Website: https://su2code.github.io
  *
@@ -52,6 +52,12 @@ CIncNSSolver::CIncNSSolver(CGeometry *geometry, CConfig *config, unsigned short 
     default:
       break;
   }
+
+  /*--- Set the initial Streamwise periodic pressure drop value. ---*/
+
+  if (config->GetKind_Streamwise_Periodic() != ENUM_STREAMWISE_PERIODIC::NONE)
+    // Note during restarts, the flow.meta is read first. But that sets the cfg-value so we are good here.
+    SPvals.Streamwise_Periodic_PressureDrop = config->GetStreamwise_Periodic_PressureDrop();
 }
 
 void CIncNSSolver::Preprocessing(CGeometry *geometry, CSolver **solver_container, CConfig *config, unsigned short iMesh,
@@ -60,8 +66,8 @@ void CIncNSSolver::Preprocessing(CGeometry *geometry, CSolver **solver_container
   const auto InnerIter = config->GetInnerIter();
   const bool muscl = config->GetMUSCL_Flow() && (iMesh == MESH_0);
   const bool center = (config->GetKind_ConvNumScheme_Flow() == SPACE_CENTERED);
-  const bool limiter = (config->GetKind_SlopeLimit_Flow() != NO_LIMITER) && (InnerIter <= config->GetLimiterIter());
-  const bool van_albada = (config->GetKind_SlopeLimit_Flow() == VAN_ALBADA_EDGE);
+  const bool limiter = (config->GetKind_SlopeLimit_Flow() != LIMITER::NONE) && (InnerIter <= config->GetLimiterIter());
+  const bool van_albada = (config->GetKind_SlopeLimit_Flow() == LIMITER::VAN_ALBADA_EDGE);
   const bool wall_functions = config->GetWall_Functions();
 
   /*--- Common preprocessing steps (implemented by CEulerSolver) ---*/
@@ -101,12 +107,9 @@ void CIncNSSolver::Preprocessing(CGeometry *geometry, CSolver **solver_container
   /*--- Compute the TauWall from the wall functions ---*/
 
   if (wall_functions) {
-    SU2_OMP_MASTER
-    SetTau_Wall_WF(geometry, solver_container, config);
-    END_SU2_OMP_MASTER
+    SU2_OMP_SAFE_GLOBAL_ACCESS(SetTau_Wall_WF(geometry, solver_container, config);)
     // nijso: we have to set this as well??
     // seteddyviscfirstpoint
-    SU2_OMP_BARRIER
   }
 
   /*--- Compute recovered pressure and temperature for streamwise periodic flow ---*/
@@ -131,10 +134,6 @@ void CIncNSSolver::GetStreamwise_Periodic_Properties(const CGeometry *geometry,
   /*---    boundary terms of the energy equation. Area and the avg-density are used for the       ---*/
   /*---    Pressure-Drop update in case of a prescribed massflow.                                 ---*/
   /*-------------------------------------------------------------------------------------------------*/
-
-  const auto nZone = geometry->GetnZone();
-  const auto InnerIter = config->GetInnerIter();
-  const auto OuterIter = config->GetOuterIter();
 
   su2double Area_Local            = 0.0,
             MassFlow_Local        = 0.0,
@@ -176,7 +175,7 @@ void CIncNSSolver::GetStreamwise_Periodic_Properties(const CGeometry *geometry,
     } // loop periodic boundaries
   } // loop MarkerAll
 
-  // MPI Communication: Sum Area, Sum rho*A & T*A and divide by AreaGlobbal, sum massflow
+  // MPI Communication: Sum Area, Sum rho*A & T*A and divide by AreaGlobal, sum massflow
   su2double Area_Global(0), Average_Density_Global(0), MassFlow_Global(0), Temperature_Global(0);
   SU2_MPI::Allreduce(&Area_Local,            &Area_Global,            1, MPI_DOUBLE, MPI_SUM, SU2_MPI::GetComm());
   SU2_MPI::Allreduce(&Average_Density_Local, &Average_Density_Global, 1, MPI_DOUBLE, MPI_SUM, SU2_MPI::GetComm());
@@ -189,50 +188,14 @@ void CIncNSSolver::GetStreamwise_Periodic_Properties(const CGeometry *geometry,
   /*--- Set solver variables ---*/
   SPvals.Streamwise_Periodic_MassFlow = MassFlow_Global;
   SPvals.Streamwise_Periodic_InletTemperature = Temperature_Global;
-
-  /*--- As deltaP changes with prescribed massflow the const config value should only be used once. ---*/
-  if((nZone==1 && InnerIter==0) ||
-     (nZone>1  && OuterIter==0 && InnerIter==0)) {
-    SPvals.Streamwise_Periodic_PressureDrop = config->GetStreamwise_Periodic_PressureDrop() / config->GetPressure_Ref();
-  }
-
-  if (config->GetKind_Streamwise_Periodic() == ENUM_STREAMWISE_PERIODIC::MASSFLOW) {
-    /*------------------------------------------------------------------------------------------------*/
-    /*--- 2. Update the Pressure Drop [Pa] for the Momentum source term if Massflow is prescribed. ---*/
-    /*---    The Pressure drop is iteratively adapted to result in the prescribed Target-Massflow. ---*/
-    /*------------------------------------------------------------------------------------------------*/
-
-    /*--- Load/define all necessary variables ---*/
-    const su2double TargetMassFlow = config->GetStreamwise_Periodic_TargetMassFlow() / (config->GetDensity_Ref() * config->GetVelocity_Ref());
-    const su2double damping_factor = config->GetInc_Outlet_Damping();
-    su2double Pressure_Drop_new, ddP;
-
-    /*--- Compute update to Delta p based on massflow-difference ---*/
-    ddP = 0.5 / ( Average_Density_Global * pow(Area_Global, 2)) * (pow(TargetMassFlow, 2) - pow(MassFlow_Global, 2));
-
-    /*--- Store updated pressure difference ---*/
-    Pressure_Drop_new = SPvals.Streamwise_Periodic_PressureDrop + damping_factor*ddP;
-    /*--- During restarts, this routine GetStreamwise_Periodic_Properties can get called multiple times
-          (e.g. 4x for INC_RANS restart). Each time, the pressure drop gets updated. For INC_RANS restarts
-          it gets called 2x before the restart files are read such that the current massflow is
-          Area*inital-velocity which can be way off!
-          With this there is still a slight inconsitency wrt to a non-restarted simulation: The restarted "zero-th"
-          iteration does not get a pressure-update but the continuing simulation would have an update here. This can be
-          fully neglected if the pressure drop is converged. And for all other cases it should be minor difference at
-          best ---*/
-    if((nZone==1 && InnerIter>0) ||
-       (nZone>1  && OuterIter>0)) {
-      SPvals.Streamwise_Periodic_PressureDrop = Pressure_Drop_new;
-    }
-
-  } // if massflow
-
+  SPvals.Streamwise_Periodic_BoundaryArea = Area_Global;
+  SPvals.Streamwise_Periodic_AvgDensity = Average_Density_Global;
 
   if (config->GetEnergy_Equation()) {
     /*---------------------------------------------------------------------------------------------*/
     /*--- 3. Compute the integrated Heatflow [W] for the energy equation source term, heatflux  ---*/
     /*---    boundary term and recovered Temperature. The computation is not completely clear.  ---*/
-    /*---    Here the Heatflux from all Bounary markers in the config-file is used.             ---*/
+    /*---    Here the Heatflux from all Boundary markers in the config-file is used.            ---*/
     /*---------------------------------------------------------------------------------------------*/
 
     su2double HeatFlow_Local = 0.0, HeatFlow_Global = 0.0;
@@ -307,10 +270,7 @@ void CIncNSSolver::Compute_Streamwise_Periodic_Recovered_Values(CConfig *config,
   END_SU2_OMP_FOR
 
   /*--- Compute the integrated Heatflux Q into the domain, and massflow over periodic markers ---*/
-  SU2_OMP_MASTER
-  GetStreamwise_Periodic_Properties(geometry, config, iMesh);
-  END_SU2_OMP_MASTER
-  SU2_OMP_BARRIER
+  SU2_OMP_SAFE_GLOBAL_ACCESS(GetStreamwise_Periodic_Properties(geometry, config, iMesh);)
 }
 
 void CIncNSSolver::Viscous_Residual(unsigned long iEdge, CGeometry *geometry, CSolver **solver_container,
@@ -323,9 +283,11 @@ unsigned long CIncNSSolver::SetPrimitive_Variables(CSolver **solver_container, c
 
   unsigned long iPoint, nonPhysicalPoints = 0;
   su2double eddy_visc = 0.0, turb_ke = 0.0, DES_LengthScale = 0.0;
+  const su2double* scalar = nullptr;
   const TURB_MODEL turb_model = config->GetKind_Turb_Model();
+  const SPECIES_MODEL species_model = config->GetKind_Species_Model();
 
-  bool tkeNeeded = ((turb_model == TURB_MODEL::SST) || (turb_model == TURB_MODEL::SST_SUST));
+  bool tkeNeeded = (turb_model == TURB_MODEL::SST);
 
   AD::StartNoSharedReading();
 
@@ -343,9 +305,14 @@ unsigned long CIncNSSolver::SetPrimitive_Variables(CSolver **solver_container, c
       }
     }
 
+    /*--- Retrieve scalar values (if needed) ---*/
+    if (species_model != SPECIES_MODEL::NONE && solver_container[SPECIES_SOL] != nullptr) {
+      scalar = solver_container[SPECIES_SOL]->GetNodes()->GetSolution(iPoint);
+    }
+  
     /*--- Incompressible flow, primitive variables --- */
 
-    bool physical = static_cast<CIncNSVariable*>(nodes)->SetPrimVar(iPoint,eddy_visc, turb_ke, GetFluidModel());
+    bool physical = static_cast<CIncNSVariable*>(nodes)->SetPrimVar(iPoint,eddy_visc, turb_ke, GetFluidModel(), scalar);
 
     /* Check for non-realizable states for reporting. */
 
@@ -384,16 +351,20 @@ void CIncNSSolver::BC_Wall_Generic(const CGeometry *geometry, const CConfig *con
 
   su2double Wall_HeatFlux = 0.0, Twall = 0.0, Tinfinity = 0.0, Transfer_Coefficient = 0.0;
 
-  switch(kind_boundary) {
+  switch (kind_boundary) {
     case HEAT_FLUX:
-      Wall_HeatFlux = config->GetWall_HeatFlux(Marker_Tag)/config->GetHeat_Flux_Ref();
+      Wall_HeatFlux = config->GetWall_HeatFlux(Marker_Tag) / config->GetHeat_Flux_Ref();
+      if (config->GetIntegrated_HeatFlux()) {
+        Wall_HeatFlux /= geometry->GetSurfaceArea(config, val_marker);
+      }
       break;
     case ISOTHERMAL:
-      Twall = config->GetIsothermal_Temperature(Marker_Tag)/config->GetTemperature_Ref();
+      Twall = config->GetIsothermal_Temperature(Marker_Tag) / config->GetTemperature_Ref();
       break;
     case HEAT_TRANSFER:
-      Transfer_Coefficient = config->GetWall_HeatTransfer_Coefficient(Marker_Tag) * config->GetTemperature_Ref()/config->GetHeat_Flux_Ref();
-      Tinfinity = config->GetWall_HeatTransfer_Temperature(Marker_Tag)/config->GetTemperature_Ref();
+      Transfer_Coefficient = config->GetWall_HeatTransfer_Coefficient(Marker_Tag) * config->GetTemperature_Ref() /
+                             config->GetHeat_Flux_Ref();
+      Tinfinity = config->GetWall_HeatTransfer_Temperature(Marker_Tag) / config->GetTemperature_Ref();
       break;
     default:
       SU2_MPI::Error("Unknown type of boundary condition.", CURRENT_FUNCTION);
@@ -873,8 +844,7 @@ void CIncNSSolver::SetTau_Wall_WF(CGeometry *geometry, CSolver **solver_containe
     SU2_OMP_ATOMIC
     globalCounter2 += smallYPlusCounter;
 
-    SU2_OMP_BARRIER
-    SU2_OMP_MASTER {
+    BEGIN_SU2_OMP_SAFE_GLOBAL_ACCESS {
       SU2_MPI::Allreduce(&globalCounter1, &notConvergedCounter, 1, MPI_UNSIGNED_LONG, MPI_SUM, SU2_MPI::GetComm());
       SU2_MPI::Allreduce(&globalCounter2, &smallYPlusCounter, 1, MPI_UNSIGNED_LONG, MPI_SUM, SU2_MPI::GetComm());
 
@@ -888,7 +858,7 @@ void CIncNSSolver::SetTau_Wall_WF(CGeometry *geometry, CSolver **solver_containe
                << " points, for which the wall model is not active." << endl;
       }
     }
-    END_SU2_OMP_MASTER
+    END_SU2_OMP_SAFE_GLOBAL_ACCESS
   }
 
 }

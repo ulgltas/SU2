@@ -1,8 +1,8 @@
 /*!
- * \file driver_structure.cpp
+ * \file CDriver.cpp
  * \brief The main subroutines for driving single or multi-zone problems.
  * \author T. Economon, H. Kline, R. Sanchez, F. Palacios
- * \version 7.3.0 "Blackbird"
+ * \version 7.4.0 "Blackbird"
  *
  * SU2 Project Website: https://su2code.github.io
  *
@@ -226,6 +226,7 @@ CDriver::CDriver(char* confFile, unsigned short val_nZone, SU2_Comm MPICommunica
 
       DynamicMesh_Preprocessing(config_container[iZone], geometry_container[iZone][iInst], solver_container[iZone][iInst],
                                 iteration_container[iZone][iInst], grid_movement[iZone][iInst], surface_movement[iZone]);
+
       /*--- Static mesh processing.  ---*/
 
       StaticMesh_Preprocessing(config_container[iZone], geometry_container[iZone][iInst]);
@@ -813,6 +814,10 @@ void CDriver::Geometrical_Preprocessing_FVM(CConfig *config, CGeometry **&geomet
     geometry[MESH_0]->ComputeSurf_Curvature(config);
   }
 
+  /*--- Compute the global surface areas for all markers. ---*/
+
+  geometry[MESH_0]->ComputeSurfaceAreaCfgFile(config);
+
   /*--- Check for periodicity and disable MG if necessary. ---*/
 
   if (rank == MASTER_NODE) cout << "Checking for periodicity." << endl;
@@ -1101,7 +1106,7 @@ void CDriver::Inlet_Preprocessing(CSolver ***solver, CGeometry **geometry,
     /*--- Uniform inlets or python-customized inlets ---*/
 
     /* --- Initialize quantities for inlet boundary
-     * This routine does not check if they python wrapper is being used to
+     * This routine does not check if the python wrapper is being used to
      * set custom boundary conditions.  This is intentional; the
      * default values for python custom BCs are initialized with the default
      * values specified in the config (avoiding non physical values) --- */
@@ -1223,22 +1228,20 @@ void CDriver::InstantiateTurbulentNumerics(unsigned short nVar_Turb, int offset,
   const int conv_bound_term = CONV_BOUND_TERM + offset;
   const int visc_bound_term = VISC_BOUND_TERM + offset;
 
-  bool spalart_allmaras, neg_spalart_allmaras, e_spalart_allmaras, comp_spalart_allmaras, e_comp_spalart_allmaras, menter_sst;
-  spalart_allmaras = neg_spalart_allmaras = e_spalart_allmaras = comp_spalart_allmaras = e_comp_spalart_allmaras = menter_sst = false;
-
   /*--- Assign turbulence model booleans ---*/
+
+  bool spalart_allmaras = false, menter_sst = false;
 
   switch (config->GetKind_Turb_Model()) {
     case TURB_MODEL::NONE:
       SU2_MPI::Error("No turbulence model selected.", CURRENT_FUNCTION);
       break;
-    case TURB_MODEL::SA:        spalart_allmaras = true;        break;
-    case TURB_MODEL::SA_NEG:    neg_spalart_allmaras = true;    break;
-    case TURB_MODEL::SA_E:      e_spalart_allmaras = true;      break;
-    case TURB_MODEL::SA_COMP:   comp_spalart_allmaras = true;   break;
-    case TURB_MODEL::SA_E_COMP: e_comp_spalart_allmaras = true; break;
-    case TURB_MODEL::SST:       menter_sst = true;              break;
-    case TURB_MODEL::SST_SUST:  menter_sst = true;              break;
+    case TURB_MODEL::SA:
+      spalart_allmaras = true;
+      break;
+    case TURB_MODEL::SST:
+      menter_sst = true;
+      break;
   }
 
   /*--- If the Menter SST model is used, store the constants of the model and determine the
@@ -1261,10 +1264,11 @@ void CDriver::InstantiateTurbulentNumerics(unsigned short nVar_Turb, int offset,
       break;
     case SPACE_UPWIND :
       for (auto iMGlevel = 0u; iMGlevel <= config->GetnMGLevels(); iMGlevel++) {
-        if (spalart_allmaras || neg_spalart_allmaras || e_spalart_allmaras || comp_spalart_allmaras || e_comp_spalart_allmaras) {
+        if (spalart_allmaras) {
           numerics[iMGlevel][TURB_SOL][conv_term] = new CUpwSca_TurbSA<Indices>(nDim, nVar_Turb, config);
         }
-        else if (menter_sst) numerics[iMGlevel][TURB_SOL][conv_term] = new CUpwSca_TurbSST<Indices>(nDim, nVar_Turb, config);
+        else if (menter_sst)
+          numerics[iMGlevel][TURB_SOL][conv_term] = new CUpwSca_TurbSST<Indices>(nDim, nVar_Turb, config);
       }
       break;
     default:
@@ -1275,11 +1279,13 @@ void CDriver::InstantiateTurbulentNumerics(unsigned short nVar_Turb, int offset,
   /*--- Definition of the viscous scheme for each equation and mesh level ---*/
 
   for (auto iMGlevel = 0u; iMGlevel <= config->GetnMGLevels(); iMGlevel++) {
-    if (spalart_allmaras || e_spalart_allmaras || comp_spalart_allmaras || e_comp_spalart_allmaras) {
-      numerics[iMGlevel][TURB_SOL][visc_term] = new CAvgGrad_TurbSA<Indices>(nDim, nVar_Turb, true, config);
+    if (spalart_allmaras) {
+      if (config->GetSAParsedOptions().version == SA_OPTIONS::NEG) {
+        numerics[iMGlevel][TURB_SOL][visc_term] = new CAvgGrad_TurbSA_Neg<Indices>(nDim, nVar_Turb, true, config);
+      } else {
+        numerics[iMGlevel][TURB_SOL][visc_term] = new CAvgGrad_TurbSA<Indices>(nDim, nVar_Turb, true, config);
+      }
     }
-    else if (neg_spalart_allmaras)
-      numerics[iMGlevel][TURB_SOL][visc_term] = new CAvgGrad_TurbSA_Neg<Indices>(nDim, nVar_Turb, true, config);
     else if (menter_sst)
       numerics[iMGlevel][TURB_SOL][visc_term] = new CAvgGrad_TurbSST<Indices>(nDim, nVar_Turb, constants, true, config);
   }
@@ -1290,15 +1296,7 @@ void CDriver::InstantiateTurbulentNumerics(unsigned short nVar_Turb, int offset,
     auto& turb_source_first_term = numerics[iMGlevel][TURB_SOL][source_first_term];
 
     if (spalart_allmaras)
-      turb_source_first_term = new CSourcePieceWise_TurbSA<Indices>(nDim, nVar_Turb, config);
-    else if (e_spalart_allmaras)
-      turb_source_first_term = new CSourcePieceWise_TurbSA_E<Indices>(nDim, nVar_Turb, config);
-    else if (comp_spalart_allmaras)
-      turb_source_first_term = new CSourcePieceWise_TurbSA_COMP<Indices>(nDim, nVar_Turb, config);
-    else if (e_comp_spalart_allmaras)
-      turb_source_first_term = new CSourcePieceWise_TurbSA_E_COMP<Indices>(nDim, nVar_Turb, config);
-    else if (neg_spalart_allmaras)
-      turb_source_first_term = new CSourcePieceWise_TurbSA_Neg<Indices>(nDim, nVar_Turb, config);
+      turb_source_first_term = SAFactory<Indices>(nDim, config);
     else if (menter_sst)
       turb_source_first_term = new CSourcePieceWise_TurbSST<Indices>(nDim, nVar_Turb, constants, kine_Inf, omega_Inf,
                                                                      config);
@@ -1309,13 +1307,14 @@ void CDriver::InstantiateTurbulentNumerics(unsigned short nVar_Turb, int offset,
   /*--- Definition of the boundary condition method ---*/
 
   for (auto iMGlevel = 0u; iMGlevel <= config->GetnMGLevels(); iMGlevel++) {
-    if (spalart_allmaras || e_spalart_allmaras || comp_spalart_allmaras || e_comp_spalart_allmaras) {
+    if (spalart_allmaras) {
       numerics[iMGlevel][TURB_SOL][conv_bound_term] = new CUpwSca_TurbSA<Indices>(nDim, nVar_Turb, config);
-      numerics[iMGlevel][TURB_SOL][visc_bound_term] = new CAvgGrad_TurbSA<Indices>(nDim, nVar_Turb, false, config);
-    }
-    else if (neg_spalart_allmaras) {
-      numerics[iMGlevel][TURB_SOL][conv_bound_term] = new CUpwSca_TurbSA<Indices>(nDim, nVar_Turb, config);
-      numerics[iMGlevel][TURB_SOL][visc_bound_term] = new CAvgGrad_TurbSA_Neg<Indices>(nDim, nVar_Turb, false, config);
+
+      if (config->GetSAParsedOptions().version == SA_OPTIONS::NEG) {
+        numerics[iMGlevel][TURB_SOL][visc_bound_term] = new CAvgGrad_TurbSA_Neg<Indices>(nDim, nVar_Turb, false, config);
+      } else {
+        numerics[iMGlevel][TURB_SOL][visc_bound_term] = new CAvgGrad_TurbSA<Indices>(nDim, nVar_Turb, false, config);
+      }
     }
     else if (menter_sst) {
       numerics[iMGlevel][TURB_SOL][conv_bound_term] = new CUpwSca_TurbSST<Indices>(nDim, nVar_Turb, config);
