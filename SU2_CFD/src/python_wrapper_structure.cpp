@@ -1068,7 +1068,6 @@ void CHBDriver::UpdateHBOmega(su2double val_omega){
 }
 
 void CDiscAdjHarmonicDriver::UpdateHBOmega(su2double val_omega){
-  AD::RegisterInput(val_omega);
   config_container[ZONE_0]->SetOmega_HB(0, 0.0);
   config_container[ZONE_0]->SetHarmonicBalance_Period(2*PI_NUMBER/val_omega);
   for (unsigned short iOmega = 1; iOmega < (nInstHB+1)/2; iOmega++)

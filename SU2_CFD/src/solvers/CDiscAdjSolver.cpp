@@ -298,7 +298,9 @@ void CDiscAdjSolver::RegisterVariables(CGeometry *geometry, CConfig *config, boo
   {
     nInstHB = config->GetnTimeInstances();
     OmegaHB = config->GetOmega_HB()[1]; // Base frequency
-    AD::RegisterInput(OmegaHB);
+    if (!reset) {
+      AD::RegisterInput(OmegaHB);
+    }
     config->SetHarmonicBalance_Period(2*M_PI/OmegaHB);
     for (unsigned short iOmega = 1; iOmega < (nInstHB+1)/2; iOmega++)
     {
