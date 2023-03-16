@@ -751,6 +751,8 @@ public:
    */
   void SetInlet_Angle(unsigned short iMarker, passivedouble alpha);
 
+  passivedouble GetObjFunc();
+
   /*!
    * \brief Sum the number of primal or adjoint variables for all solvers in a given zone.
    * \param[in] iZone - Index of the zone.

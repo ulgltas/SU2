@@ -1077,3 +1077,14 @@ void CDiscAdjHarmonicDriver::UpdateHBOmega(su2double val_omega){
   }
   ComputeHB_Operator();
 }
+
+passivedouble CDriver::GetObjFunc(){
+  su2double ObjFunc = 0.;
+  for (unsigned short iInst = 0; iInst < config_container[ZONE_0]->GetnTimeInstances(); iInst++)
+  {
+    output_container[ZONE_0]->SetHistory_Output(geometry_container[ZONE_0][iInst][MESH_0], solver_container[ZONE_0][iInst][MESH_0], config_container[ZONE_0], config_container[ZONE_0]->GetTimeIter(),
+                                     config_container[ZONE_0]->GetOuterIter(), config_container[ZONE_0]->GetInnerIter());
+    ObjFunc += solver_container[ZONE_0][iInst][MESH_0][FLOW_SOL]->GetTotal_ComboObj();
+  }
+  return SU2_TYPE::GetValue(ObjFunc);
+}
