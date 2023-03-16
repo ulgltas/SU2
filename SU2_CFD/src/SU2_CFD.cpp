@@ -111,7 +111,7 @@ int main(int argc, char *argv[]) {
     driver = new CDummyDriver(config_file_name, nZone, MPICommunicator);
 
   }
-  else if ((!multizone && !harmonic_balance && !turbo) || (turbo && disc_adj)) {
+  else if ((!multizone && !harmonic_balance && !turbo) || (turbo && disc_adj) || (harmonic_balance && disc_adj)) {
 
     /*--- Generic single zone problem: instantiate the single zone driver class. ---*/
     if (nZone != 1)
@@ -139,8 +139,12 @@ int main(int argc, char *argv[]) {
   else if (harmonic_balance) {
 
     /*--- Harmonic balance problem: instantiate the Harmonic Balance driver class. ---*/
-    driver = new CHBDriver(config_file_name, nZone, MPICommunicator);
-
+    if (disc_adj) {
+      driver = new CDiscAdjHarmonicDriver(config_file_name, nZone, MPICommunicator);
+    }
+    else {
+      driver = new CHBDriver(config_file_name, nZone, MPICommunicator);
+    }
   }
   else if (turbo) {
 
