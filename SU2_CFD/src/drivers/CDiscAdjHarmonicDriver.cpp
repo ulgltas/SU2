@@ -54,7 +54,6 @@ CDiscAdjHarmonicDriver::CDiscAdjHarmonicDriver(char* confFile,
 
   nInstHB = config->GetnTimeInstances();
   direct_iteration   = new CIteration*    [nInstHB] ();
-  direct_output = new COutput*[nInstHB];
 
   D = nullptr;
   /*--- allocate dynamic memory for the Harmonic Balance operator ---*/
@@ -85,10 +84,10 @@ CDiscAdjHarmonicDriver::CDiscAdjHarmonicDriver(char* confFile,
     output_legacy = COutputFactory::CreateLegacyOutput(config_container[ZONE_0]);
 
     if (config->GetKind_Regime() == ENUM_REGIME::COMPRESSIBLE) {
-      direct_output[ZONE_0] = COutputFactory::CreateOutput(MAIN_SOLVER::EULER, config, nDim);
+      direct_output = COutputFactory::CreateOutput(MAIN_SOLVER::EULER, config, nDim);
     }
     else {
-      direct_output[ZONE_0] =  COutputFactory::CreateOutput(MAIN_SOLVER::INC_EULER, config, nDim);
+      direct_output =  COutputFactory::CreateOutput(MAIN_SOLVER::INC_EULER, config, nDim);
     }
 
     MainVariables = RECORDING::SOLUTION_VARIABLES;
@@ -139,21 +138,21 @@ CDiscAdjHarmonicDriver::CDiscAdjHarmonicDriver(char* confFile,
     break;
 
   }
-  direct_output[ZONE_0]->PreprocessHistoryOutput(config, false);
+  direct_output->PreprocessHistoryOutput(config, false);
 
 }
 
 CDiscAdjHarmonicDriver::~CDiscAdjHarmonicDriver(void) {
 
   /*--- delete dynamic memory for the Harmonic Balance operator ---*/
-  for (auto kInst = 0; kInst < nInstHB; kInst++) delete [] D[kInst];
+  /*for (auto kInst = 0; kInst < nInstHB; kInst++) delete [] D[kInst];
   delete [] D;
 
   for (auto kInst = 0; kInst < nInstHB; kInst++){
     delete direct_iteration[iInst];
   }
 
-  delete direct_iteration;
+  delete [] direct_iteration;*/
   delete direct_output;
 
 }
@@ -363,7 +362,7 @@ void CDiscAdjHarmonicDriver::SetObjFunction(){
     case MAIN_SOLVER::DISC_ADJ_INC_EULER:       case MAIN_SOLVER::DISC_ADJ_INC_NAVIER_STOKES:      case MAIN_SOLVER::DISC_ADJ_INC_RANS:
     case MAIN_SOLVER::DISC_ADJ_EULER:           case MAIN_SOLVER::DISC_ADJ_NAVIER_STOKES:          case MAIN_SOLVER::DISC_ADJ_RANS:
     case MAIN_SOLVER::DISC_ADJ_FEM_EULER:       case MAIN_SOLVER::DISC_ADJ_FEM_NS:                 case MAIN_SOLVER::DISC_ADJ_FEM_RANS:
-      direct_output[ZONE_0]->SetHistory_Output(geometry_container[ZONE_0][iInst][MESH_0], solver_container[ZONE_0][iInst][MESH_0], config, config->GetTimeIter(),
+      direct_output->SetHistory_Output(geometry_container[ZONE_0][iInst][MESH_0], solver_container[ZONE_0][iInst][MESH_0], config, config->GetTimeIter(),
                                      config->GetOuterIter(), config->GetInnerIter());
       /*--- Surface based obj. function ---*/
       ObjFunc += solver_container[ZONE_0][iInst][MESH_0][FLOW_SOL]->GetTotal_ComboObj();
@@ -445,7 +444,7 @@ void CDiscAdjHarmonicDriver::DirectRun(RECORDING kind_recording){
 
   /*--- Zone preprocessing ---*/
   for (auto iInst = 0; iInst < nInstHB; iInst++) {
-    direct_iteration[iInst]->Preprocess(direct_output[ZONE_0], integration_container, geometry_container, solver_container, numerics_container, config_container, surface_movement, grid_movement, FFDBox, ZONE_0, iInst);
+    direct_iteration[iInst]->Preprocess(direct_output, integration_container, geometry_container, solver_container, numerics_container, config_container, surface_movement, grid_movement, FFDBox, ZONE_0, iInst);
   }
   /*--- Iterate the direct solver ---*/
   for (auto iInst = 0; iInst < nInstHB; iInst++) {
@@ -456,7 +455,7 @@ void CDiscAdjHarmonicDriver::DirectRun(RECORDING kind_recording){
     StabilizeHarmonicBalance();
   }
   for (auto iInst = 0; iInst < nInstHB; iInst++) {
-    direct_iteration[iInst]->Iterate(direct_output[ZONE_0], integration_container, geometry_container, solver_container, numerics_container, config_container, surface_movement, grid_movement, FFDBox, ZONE_0, iInst);
+    direct_iteration[iInst]->Iterate(direct_output, integration_container, geometry_container, solver_container, numerics_container, config_container, surface_movement, grid_movement, FFDBox, ZONE_0, iInst);
   }
   for (auto iInst = 0; iInst < nInstHB; iInst++) {
     SetHarmonicBalance(iInst, (config_container[ZONE_0]->GetKind_TimeIntScheme_Flow() == EULER_IMPLICIT));
@@ -467,13 +466,13 @@ void CDiscAdjHarmonicDriver::DirectRun(RECORDING kind_recording){
   }
 
   for (auto iInst = 0; iInst < nInstHB; iInst++) {
-    direct_iteration[iInst]->Update(direct_output[ZONE_0], integration_container, geometry_container,
+    direct_iteration[iInst]->Update(direct_output, integration_container, geometry_container,
         solver_container, numerics_container, config_container,
         surface_movement, grid_movement, FFDBox, ZONE_0, iInst);
   }
   /*--- Postprocess the direct solver ---*/
   for (auto iInst = 0; iInst < nInstHB; iInst++) {
-    direct_iteration[iInst]->Postprocess(direct_output[ZONE_0], integration_container, geometry_container, solver_container, numerics_container, config_container, surface_movement, grid_movement, FFDBox, ZONE_0, iInst);
+    direct_iteration[iInst]->Postprocess(direct_output, integration_container, geometry_container, solver_container, numerics_container, config_container, surface_movement, grid_movement, FFDBox, ZONE_0, iInst);
   }
 
   /*--- Print the direct residual to screen ---*/

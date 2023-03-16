@@ -45,7 +45,7 @@ protected:
   int MainSolver;                               /*!< \brief Index of the main adjoint solver. */
   su2double ObjFunc;                            /*!< \brief The value of the objective function.*/
   CIteration** direct_iteration;                /*!< \brief A pointer to the direct iteration.*/
-  COutput** direct_output;                      /*!< \brief Array of pointers to the direct outputs. */
+  COutput* direct_output;                      /*!< \brief Array of pointers to the direct outputs. */
 
   CConfig *config;                              /*!< \brief Definition of the particular problem. */
   CIteration *iteration;                        /*!< \brief Container vector with all the iteration methods. */
