@@ -3856,7 +3856,7 @@ void CHBDriver::ComputeHB_Operator() {
   /*--- Build the array containing the selected frequencies to solve ---*/
   for (iInst = 0; iInst < nInstHB; iInst++) {
     Omega_HB[iInst]  = config_container[ZONE_0]->GetOmega_HB()[iInst];
-    Omega_HB[iInst] /= config_container[ZONE_0]->GetOmega_Ref(); //TODO: check
+    //Omega_HB[iInst] /= config_container[ZONE_0]->GetOmega_Ref(); //TODO: check
   }
 
   /*--- Build the diagonal matrix of the frequencies DD ---*/

@@ -798,14 +798,13 @@ void CDiscAdjHarmonicDriver::SetHarmonicBalance(unsigned short iInst, bool impli
         /*--- Retrieve solution at this node in current zone ---*/
         for (iVar = 0; iVar < nVar_Turb; iVar++) {
           U_Turb[iVar] = solver_container[ZONE_0][jInst][MESH_0][TURB_SOL]->GetNodes()->GetSolution(iPoint, iVar);
-          Source_Turb[iVar] += U_Turb[iVar]*D[iInst][jInst]*Volume*0.5;
+          Source_Turb[iVar] += U_Turb[iVar]*D[iInst][jInst]*Volume;
           if (implicit) {
             U_Turb_old[iVar] = 0.;
             U_Turb_old[iVar] = solver_container[ZONE_0][jInst][MESH_0][TURB_SOL]->GetNodes()->GetSolution_Old(iPoint, iVar);
             deltaU = U_Turb[iVar] - U_Turb_old[iVar];
             Source_Turb[iVar] += deltaU*D[iInst][jInst]*Volume*0.;
           }
-          //Source_Turb[iVar] += U_Turb[iVar]*D[iInst][jInst];
         }
       }
 
