@@ -12,6 +12,7 @@
 #include <string>
 #include <stdexcept>
 #include <vector>
+#include <cstdint>
 
 int32_t countFaceConnections(int32_t const* faceConnections, int64_t numFaceValues, int32_t mode);
 
