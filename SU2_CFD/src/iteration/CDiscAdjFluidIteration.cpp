@@ -38,6 +38,7 @@ void CDiscAdjFluidIteration::Preprocess(COutput* output, CIntegration**** integr
   const bool dual_time_1st = (config[iZone]->GetTime_Marching() == TIME_MARCHING::DT_STEPPING_1ST);
   const bool dual_time_2nd = (config[iZone]->GetTime_Marching() == TIME_MARCHING::DT_STEPPING_2ND);
   const bool dual_time = (dual_time_1st || dual_time_2nd);
+  const bool harmonic_balance = config[iZone]->GetTime_Marching() == TIME_MARCHING::HARMONIC_BALANCE;
   const bool grid_IsMoving = config[iZone]->GetGrid_Movement();
   const bool species = config[iZone]->GetKind_Species_Model() != SPECIES_MODEL::NONE;
   const bool heat = config[iZone]->GetWeakly_Coupled_Heat();
@@ -47,7 +48,7 @@ void CDiscAdjFluidIteration::Preprocess(COutput* output, CIntegration**** integr
 
   /*--- For the unsteady adjoint, load direct solutions from restart files. ---*/
 
-  if (config[iZone]->GetTime_Marching() != TIME_MARCHING::STEADY && config[iZone]->GetTime_Marching() != TIME_MARCHING::HARMONIC_BALANCE) {
+  if (config[iZone]->GetTime_Marching() != TIME_MARCHING::STEADY && !harmonic_balance) {
     const int Direct_Iter = static_cast<int>(config[iZone]->GetUnst_AdjointIter()) - static_cast<int>(TimeIter) - 2 + dual_time;
 
     /*--- For dual-time stepping we want to load the already converged solution at timestep n ---*/
