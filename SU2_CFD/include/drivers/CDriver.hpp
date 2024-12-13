@@ -984,7 +984,7 @@ public:
    * \author T. Economon, K. Naik
    * \param[in] iZone - Current zone number.
    */
-  void SetHarmonicBalance(unsigned short iZone);
+  void SetHarmonicBalance();
 
   /*!
    * \brief Precondition Harmonic Balance source term for stability

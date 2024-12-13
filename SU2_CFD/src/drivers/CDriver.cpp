@@ -3494,11 +3494,8 @@ void CHBDriver::Run() {
 
 void CHBDriver::Update() {
 
-  for (iInst = 0; iInst < nInstHB; iInst++) {
-    /*--- Compute the harmonic balance terms across all zones ---*/
-    SetHarmonicBalance(iInst);
-
-  }
+  /*--- Compute the harmonic balance terms across all zones ---*/
+  SetHarmonicBalance();
 
   /*--- Precondition the harmonic balance source terms ---*/
   if (config_container[ZONE_0]->GetHB_Precondition() == YES) {
@@ -3545,9 +3542,9 @@ void CHBDriver::ResetConvergence() {
 
 }
 
-void CHBDriver::SetHarmonicBalance(unsigned short iInst) {
+void CHBDriver::SetHarmonicBalance() {
 
-  unsigned short iVar, jInst, iMGlevel;
+  unsigned short iVar, iInst, jInst, iMGlevel;
   unsigned short nVar = solver_container[ZONE_0][INST_0][MESH_0][FLOW_SOL]->GetnVar();
   unsigned long iPoint;
   unsigned long InnerIter = config_container[ZONE_0]->GetInnerIter();
@@ -3558,11 +3555,15 @@ void CHBDriver::SetHarmonicBalance(unsigned short iInst) {
   }
 
   /*--- Retrieve values from the config file ---*/
-  su2double *U = new su2double[nVar];
-  su2double *U_old = new su2double[nVar];
-  su2double *Psi = new su2double[nVar];
-  su2double *Psi_old = new su2double[nVar];
-  su2double *Source = new su2double[nVar];
+  su2double *U = new su2double[nInstHB];
+  su2double *UV = new su2double[nInstHB];
+  su2double *U_old = new su2double[nInstHB];
+  su2double *UV_old = new su2double[nInstHB];
+  su2double *Psi = new su2double[nInstHB];
+  su2double *PsiV = new su2double[nInstHB];
+  su2double *Psi_old = new su2double[nInstHB];
+  su2double *PsiV_old = new su2double[nInstHB];
+  su2double *Source = new su2double[nInstHB];
   su2double deltaU, deltaPsi;
 
   /*--- Compute period of oscillation ---*/
@@ -3579,49 +3580,56 @@ void CHBDriver::SetHarmonicBalance(unsigned short iInst) {
   for (iMGlevel = 0; iMGlevel <= config_container[ZONE_0]->GetnMGLevels(); iMGlevel++) {
 
     /*--- Loop over each node in the volume mesh ---*/
-    for (iPoint = 0; iPoint < geometry_container[ZONE_0][iInst][iMGlevel]->GetnPoint(); iPoint++) {
-
+    for (iPoint = 0; iPoint < geometry_container[ZONE_0][INST_0][iMGlevel]->GetnPoint(); iPoint++) {
+      /*--- Loop over all variables ---*/
       for (iVar = 0; iVar < nVar; iVar++) {
-        Source[iVar] = 0.0;
-      }
-
-      /*--- Step across the columns ---*/
-      for (jInst = 0; jInst < nInstHB; jInst++) {
-        su2double Volume = geometry_container[ZONE_0][jInst][iMGlevel]->nodes->GetVolume(iPoint);
-        /*--- Retrieve solution at this node in current zone ---*/
-        for (iVar = 0; iVar < nVar; iVar++) {
-
+        /*--- Calculate volume source term ---*/
+        for (iInst = 0; iInst < nInstHB; iInst++) {
+          su2double Volume = geometry_container[ZONE_0][iInst][iMGlevel]->nodes->GetVolume(iPoint);
+          Source[iInst] = 0.0;
           if (!adjoint) {
-            U[iVar] = solver_container[ZONE_0][jInst][iMGlevel][FLOW_SOL]->GetNodes()->GetSolution(iPoint, iVar);
-            Source[iVar] += U[iVar]*D[iInst][jInst]*Volume;
+            U[iInst] = solver_container[ZONE_0][iInst][iMGlevel][FLOW_SOL]->GetNodes()->GetSolution(iPoint, iVar);
+            UV[iInst] = Volume*U[iInst];
             if (implicit) {
-              U_old[iVar] = solver_container[ZONE_0][jInst][iMGlevel][FLOW_SOL]->GetNodes()->GetSolution_Old(iPoint, iVar);
-              deltaU = U[iVar] - U_old[iVar];
-              Source[iVar] += deltaU*D[iInst][jInst]*Volume;
+              U_old[iInst] = solver_container[ZONE_0][iInst][iMGlevel][FLOW_SOL]->GetNodes()->GetSolution_Old(iPoint, iVar);
+              UV_old[iInst] = Volume*U_old[iInst];
             }
           }
-
           else {
-            Psi[iVar] = solver_container[ZONE_0][jInst][iMGlevel][ADJFLOW_SOL]->GetNodes()->GetSolution(iPoint, iVar);
-            Source[iVar] += Psi[iVar]*D[jInst][iInst]*Volume;
+            Psi[iInst] = solver_container[ZONE_0][iInst][iMGlevel][ADJFLOW_SOL]->GetNodes()->GetSolution(iPoint, iVar);
             if (implicit) {
-              Psi_old[iVar] = solver_container[ZONE_0][jInst][iMGlevel][ADJFLOW_SOL]->GetNodes()->GetSolution_Old(iPoint, iVar);
-              deltaPsi = Psi[iVar] - Psi_old[iVar];
-              Source[iVar] += deltaPsi*D[jInst][iInst]*Volume;
+                Psi_old[iInst] = solver_container[ZONE_0][iInst][iMGlevel][ADJFLOW_SOL]->GetNodes()->GetSolution_Old(iPoint, iVar);
+                PsiV_old[iInst] = Volume*Psi_old[iInst];
             }
           }
         }
-
-        /*--- Store sources for current row ---*/
-        for (iVar = 0; iVar < nVar; iVar++) {
+        /*--- Loop over the time instances ---*/
+        for (iInst = 0; iInst < nInstHB; iInst++) {
+          /*--- Step across the columns ---*/
+          for (jInst = 0; jInst < nInstHB; jInst++) {
+            /*--- Retrieve solution at this node in current zone ---*/
+            if (!adjoint) {
+              Source[iInst] += UV[jInst]*D[iInst][jInst];
+              if (implicit) {
+                deltaU = UV[jInst] - UV_old[jInst];
+                Source[iInst] += deltaU*D[iInst][jInst];
+              }
+            }
+            else {
+              Source[iInst] += PsiV[jInst]*D[jInst][iInst];
+              if (implicit) {
+                deltaPsi = PsiV[jInst] - PsiV_old[jInst];
+                Source[iInst] += deltaPsi*D[jInst][iInst];
+              }
+            }
+          }
           if (!adjoint) {
-            solver_container[ZONE_0][iInst][iMGlevel][FLOW_SOL]->GetNodes()->SetHarmonicBalance_Source(iPoint, iVar, Source[iVar]);
+            solver_container[ZONE_0][iInst][iMGlevel][FLOW_SOL]->GetNodes()->SetHarmonicBalance_Source(iPoint, iVar, Source[iInst]);
           }
           else {
-            solver_container[ZONE_0][iInst][iMGlevel][ADJFLOW_SOL]->GetNodes()->SetHarmonicBalance_Source(iPoint, iVar, Source[iVar]);
+            solver_container[ZONE_0][iInst][iMGlevel][ADJFLOW_SOL]->GetNodes()->SetHarmonicBalance_Source(iPoint, iVar, Source[iInst]);
           }
         }
-
       }
     }
   }
@@ -3631,43 +3639,47 @@ void CHBDriver::SetHarmonicBalance(unsigned short iInst) {
 
     /*--- Extra variables needed if we have a turbulence model. ---*/
     unsigned short nVar_Turb = solver_container[ZONE_0][INST_0][MESH_0][TURB_SOL]->GetnVar();
-    su2double *U_Turb = new su2double[nVar_Turb];
-    su2double *U_Turb_old = new su2double[nVar_Turb];
-    su2double *Source_Turb = new su2double[nVar_Turb];
 
     /*--- Loop over only the finest mesh level (turbulence is always solved
      on the original grid only). ---*/
     for (iPoint = 0; iPoint < geometry_container[ZONE_0][INST_0][MESH_0]->GetnPoint(); iPoint++) {
-      for (iVar = 0; iVar < nVar_Turb; iVar++) Source_Turb[iVar] = 0.0;
-      for (jInst = 0; jInst < nInstHB; jInst++) {
-        su2double Volume = geometry_container[ZONE_0][jInst][MESH_0]->nodes->GetVolume(iPoint);
-        /*--- Retrieve solution at this node in current zone ---*/
-        for (iVar = 0; iVar < nVar_Turb; iVar++) {
-          U_Turb[iVar] = solver_container[ZONE_0][jInst][MESH_0][TURB_SOL]->GetNodes()->GetSolution(iPoint, iVar);
-          Source_Turb[iVar] += U_Turb[iVar]*D[iInst][jInst]*Volume;
+      for (iVar = 0; iVar < nVar_Turb; iVar++) {
+        for (iInst = 0; iInst < nInstHB; iInst++) {
+          su2double Volume = geometry_container[ZONE_0][iInst][MESH_0]->nodes->GetVolume(iPoint);
+          Source[iInst] = 0.0;
+          U[iInst] = solver_container[ZONE_0][iInst][MESH_0][TURB_SOL]->GetNodes()->GetSolution(iPoint, iVar);
+          UV[iInst] = Volume*U[iInst];
           if (implicit) {
-            U_Turb_old[iVar] = 0.;
-            U_Turb_old[iVar] = solver_container[ZONE_0][jInst][MESH_0][TURB_SOL]->GetNodes()->GetSolution_Old(iPoint, iVar);
-            deltaU = U_Turb[iVar] - U_Turb_old[iVar];
-            Source_Turb[iVar] += deltaU*D[iInst][jInst]*Volume;
+            U_old[iInst] = solver_container[ZONE_0][iInst][MESH_0][TURB_SOL]->GetNodes()->GetSolution_Old(iPoint, iVar);
+            UV_old[iInst] = Volume*U_old[iInst];
           }
         }
+        for (iInst = 0; iInst < nInstHB; iInst++) {
+          /*--- Step across the columns ---*/
+          for (jInst = 0; jInst < nInstHB; jInst++) {
+            /*--- Retrieve solution at this node in current zone ---*/
+            Source[iInst] += UV[jInst]*D[iInst][jInst];
+            if (implicit) {
+              deltaU = UV[jInst] - UV_old[jInst];
+              Source[iInst] += deltaU*D[iInst][jInst];
+            }
+          }
+          /*--- Store sources for current iInst ---*/
+          solver_container[ZONE_0][iInst][MESH_0][TURB_SOL]->GetNodes()->SetHarmonicBalance_Source(iPoint, iVar, Source[iInst]);
+        }
       }
-
-      /*--- Store sources for current iZone ---*/
-      for (iVar = 0; iVar < nVar_Turb; iVar++)
-        solver_container[ZONE_0][iInst][MESH_0][TURB_SOL]->GetNodes()->SetHarmonicBalance_Source(iPoint, iVar, Source_Turb[iVar]);
     }
-
-    delete [] U_Turb;
-    delete [] Source_Turb;
   }
 
   delete [] Source;
   delete [] U;
+  delete [] UV;
   delete [] U_old;
+  delete [] UV_old;
   delete [] Psi;
+  delete [] PsiV;
   delete [] Psi_old;
+  delete [] PsiV_old;
 
 }
 
@@ -4008,10 +4020,9 @@ void CHBDriver::ComputeHB_Operator() {
 }
 
 void CHBDriver::Postprocess(){
-  for (unsigned short iInst = 0; iInst < nInstHB; iInst++)
-  {
+  for (unsigned short iInst = 0; iInst < nInstHB; iInst++) {
     iteration_container[ZONE_0][iInst]->Postprocess(output_container[ZONE_0], integration_container, geometry_container, solver_container,
         numerics_container, config_container, surface_movement, grid_movement, FFDBox, ZONE_0, iInst);
   }
-  
+
 }
