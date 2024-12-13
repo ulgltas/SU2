@@ -162,7 +162,6 @@ void CDiscAdjHarmonicDriver::Preprocess(unsigned long TimeIter) {
 
   /*--- Preprocess the adjoint iteration ---*/
   for (auto iInst = 0; iInst < nInstHB; iInst++) {
-    cout << iInst << endl;
     iteration_container[ZONE_0][iInst]->Preprocess(output_container[ZONE_0], integration_container, geometry_container,
                           solver_container, numerics_container, config_container,
                           surface_movement, grid_movement, FFDBox, ZONE_0, iInst);
@@ -174,7 +173,6 @@ void CDiscAdjHarmonicDriver::Preprocess(unsigned long TimeIter) {
   if (RecordingState != MainVariables){
     MainRecording();
   }
-  cout << "MainRecording success" << endl;
 }
 
 void CDiscAdjHarmonicDriver::Run() {
@@ -500,10 +498,6 @@ void CDiscAdjHarmonicDriver::SecondaryRecording(){
   SetRecording(RECORDING::CLEAR_INDICES);
 
   /*--- Store the computational graph of one direct iteration with the secondary variables as input. ---*/
-  if (SecondaryVariables == RECORDING::MESH_DEFORM)
-  {
-    cout << "SecondaryVariables: " << "MeshDeform" << endl;
-  }
 
   SetRecording(SecondaryVariables);
 
@@ -563,13 +557,10 @@ void CDiscAdjHarmonicDriver::ComputeHB_Operator() {
   Period /= config_container[ZONE_0]->GetTime_Ref();
 
   /*--- Build the array containing the selected frequencies to solve ---*/
-  cout << "Period: " << Period << "Omega ";
   for (iInst = 0; iInst < nInstHB; iInst++) {
     Omega_HB[iInst]  = config_container[ZONE_0]->GetOmega_HB()[iInst];
     //Omega_HB[iInst] /= config_container[ZONE_0]->GetOmega_Ref(); //TODO: check
-    cout << Omega_HB[iInst] << "\t";
   }
-  cout << endl;
 
   /*--- Build the diagonal matrix of the frequencies DD ---*/
   for (i = 0; i < nInstHB; i++) {
@@ -696,13 +687,10 @@ void CDiscAdjHarmonicDriver::ComputeHB_Operator() {
   }
 
   /*---  Take just the real part of the HB operator matrix ---*/
-  cout << "HB operator: " << endl;
   for (i = 0; i < nInstHB; i++) {
     for (k = 0; k < nInstHB; k++) {
       D[i][k] = real(Dcpx[i][k]);
-      cout << D[i][k] << "\t";
     }
-    cout << endl;
   }
 
   /*--- Deallocate dynamic memory ---*/
@@ -765,10 +753,6 @@ void CDiscAdjHarmonicDriver::SetHarmonicBalance(unsigned short iInst, bool impli
             deltaU = U[iVar] - U_old[iVar];
             Source[iVar] += deltaU*D[iInst][jInst]*Volume;
             //Source[iVar] += deltaU*D[iInst][jInst];
-          }
-          if (Source[iVar] != Source[iVar]){
-            cout << "nan from instance " << jInst << " in variable " << iVar << " in point " << iPoint << endl;
-            cout << "Volume: " << Volume << " D: " << D[iInst][jInst] << " U: " << U[iVar] << " deltaU: " << deltaU << endl;
           }
         }
 
@@ -950,7 +934,6 @@ void CDiscAdjHarmonicDriver::StabilizeHarmonicBalance() {
         for (iInst = 0; iInst < nInstHB; iInst++) {
           Source_old[iInst] = solver_container[ZONE_0][iInst][iMGlevel][FLOW_SOL]->GetNodes()->GetHarmonicBalance_Source(iPoint, iVar);
           Source[iInst] = 0;
-          if (iPoint == 1000) cout << "Source_old " << iVar << " Instance " << iInst << ": " << Source_old[iInst] << endl;
         }
 
         /*--- Step through columns ---*/
@@ -962,7 +945,6 @@ void CDiscAdjHarmonicDriver::StabilizeHarmonicBalance() {
 
           /*--- Store updated source terms for current node ---*/
           solver_container[ZONE_0][iInst][iMGlevel][FLOW_SOL]->GetNodes()->SetHarmonicBalance_Source(iPoint, iVar, Source[iInst]);
-          if (iPoint == 1000) cout << "Source " << iVar << " Instance " << iInst << ": " << Source[iInst] << endl;
         }
 
       }
