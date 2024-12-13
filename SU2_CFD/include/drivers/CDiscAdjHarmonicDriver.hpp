@@ -141,7 +141,7 @@ public:
    * \author T. Economon, K. Naik
    * \param[in] iInst - Current instance number.
    */
-  void SetHarmonicBalance(unsigned short iInst, bool implicit = false);
+  void SetHarmonicBalance(bool implicit = false);
 
   void StabilizeHarmonicBalance();
 
